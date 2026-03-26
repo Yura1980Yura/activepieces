@@ -96,6 +96,7 @@ packages/shared/src/lib/automation/flows/util/
 ├── graph-node-handles.ts              # NEW (P1-D02) — getHandlesForNodeType(), HandleConfig type
 ├── graph-edge-utils.ts                # NEW (P1-D03) — getEdgeType(), getEdgeLabel(), getEdgeStyle(), classifyEdges(), GRAPH_EDGE_TYPES
 ├── graph-canvas-utils.ts              # NEW (P1-D04) — createNodeTypesConfig(), createEdgeTypesConfig(), buildGraphFromFlowVersion(), createIsValidConnection()
+├── graph-state-utils.ts              # NEW (P1-D05) — createInitialGraphData(), syncGraphFromFlowVersion(), syncGraphToFlowVersion(), autoLayoutGraphNodes(), removeGraphNodes(), removeGraphEdges(), addGraphNode(), applyGraphConnect()
 ├── flow-structure-util.ts              # existing — linked-list traversal
 ├── flow-canvas-util.ts                 # existing — legacy position computation
 ├── flow-piece-util.ts                  # existing — piece version utils
@@ -221,6 +222,22 @@ graph-canvas/index.tsx (P1-D04)
   → @xyflow/react (ReactFlow, Background, BackgroundVariant, OnNodesChange, OnEdgesChange, OnConnect)
   → @activepieces/shared (buildGraphFromFlowVersion, createIsValidConnection, FlowVersion)
   → graph-canvas/graph-canvas-provider.tsx (GraphCanvasProvider, useGraphCanvasContext)
+
+shared/util/graph-state-utils.ts (P1-D05)
+  → shared/actions/action (FlowActionType)
+  → shared/flow-version (CanvasLayout, FlowVersion)
+  → shared/triggers/trigger (FlowTrigger)
+  → shared/util/auto-layout (computeAutoLayout)
+  → shared/util/connection-validator (validateConnection)
+  → shared/util/graph-canvas-utils (ConnectionParams)
+  → shared/util/graph-converter (GraphNode, GraphEdge, linkedListToGraph, graphToLinkedList, extractPositions)
+  → shared/util/graph-edge-utils (classifyEdges, GraphEdgeType)
+  → shared/util/flow-structure-util (flowStructureUtil, Step)
+
+state/graph-state.ts (P1-D05)
+  → @activepieces/shared (FlowVersion, FlowOperationRequest, FlowOperationType, createInitialGraphData, syncGraphFromFlowVersion, syncGraphToFlowVersion, autoLayoutGraphNodes, removeGraphNodes, removeGraphEdges, applyGraphConnect, GraphNode, ClassifiedGraphEdge)
+  → @xyflow/react (OnNodesChange, OnEdgesChange, OnConnect, Connection, applyNodeChanges, applyEdgeChanges, NodeChange, EdgeChange)
+  → builder-hooks (BuilderState)
 ```
 
 ---
