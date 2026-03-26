@@ -14,21 +14,6 @@ export enum FlowVersionState {
     DRAFT = 'DRAFT',
 }
 
-export const CanvasViewport = z.object({
-    x: z.number(),
-    y: z.number(),
-    zoom: z.number(),
-})
-
-export type CanvasViewport = z.infer<typeof CanvasViewport>
-
-export const CanvasLayout = z.object({
-    positions: z.record(z.string(), z.object({ x: z.number(), y: z.number() })),
-    viewport: CanvasViewport.optional(),
-})
-
-export type CanvasLayout = z.infer<typeof CanvasLayout>
-
 export const FlowVersion = z.object({
     ...BaseModelSchema,
     flowId: z.string(),
@@ -42,7 +27,6 @@ export const FlowVersion = z.object({
     connectionIds: z.array(z.string()),
     backupFiles: Nullable(z.record(z.string(), z.string())),
     notes: z.array(Note),
-    canvasLayout: Nullable(CanvasLayout).optional(),
 })
 
 export type FlowVersion = z.infer<typeof FlowVersion>

@@ -3,7 +3,7 @@ import { Nullable } from '../../../core/common'
 import { Metadata } from '../../../core/common/metadata'
 import { BranchCondition, CodeActionSchema, CodeActionSettings, LoopOnItemsActionSchema, LoopOnItemsActionSettings, PieceActionSchema, PieceActionSettings, RouterActionSchema, RouterActionSettings } from '../actions/action'
 import { FlowStatus } from '../flow'
-import { CanvasLayout, FlowVersion, FlowVersionState } from '../flow-version'
+import { FlowVersion, FlowVersionState } from '../flow-version'
 import { Note } from '../note'
 import { SampleDataSetting, SaveSampleDataRequest } from '../sample-data'
 import { EmptyTrigger, FlowTrigger, FlowTriggerType, PieceTrigger, PieceTriggerSettings } from '../triggers/trigger'
@@ -52,7 +52,6 @@ export enum FlowOperationType {
     DELETE_NOTE = 'DELETE_NOTE',
     ADD_NOTE = 'ADD_NOTE',
     UPDATE_SAMPLE_DATA_INFO = 'UPDATE_SAMPLE_DATA_INFO',
-    UPDATE_CANVAS_LAYOUT = 'UPDATE_CANVAS_LAYOUT',
 }
 
 export const DeleteBranchRequest = z.object({
@@ -92,10 +91,6 @@ export const UpdateSampleDataInfoRequest = z.object({
 })
 export type UpdateSampleDataInfoRequest = z.infer<typeof UpdateSampleDataInfoRequest>
 
-export const UpdateCanvasLayoutRequest = z.object({
-    canvasLayout: Nullable(CanvasLayout),
-})
-export type UpdateCanvasLayoutRequest = z.infer<typeof UpdateCanvasLayoutRequest>
 
 export const DuplicateBranchRequest = z.object({
     branchIndex: z.number(),
@@ -321,10 +316,6 @@ export const FlowOperationRequest = z.union([
         type: z.literal(FlowOperationType.UPDATE_SAMPLE_DATA_INFO),
         request: UpdateSampleDataInfoRequest,
     }).describe('Update Sample Data Info'),
-    z.object({
-        type: z.literal(FlowOperationType.UPDATE_CANVAS_LAYOUT),
-        request: UpdateCanvasLayoutRequest,
-    }).describe('Update Canvas Layout'),
 ])
 
 
@@ -427,11 +418,7 @@ export const flowOperations = {
                 clonedVersion = _updateSampleDataInfo(clonedVersion, operation.request)
                 break
             }
-            case FlowOperationType.UPDATE_CANVAS_LAYOUT: {
-                clonedVersion.canvasLayout = operation.request.canvasLayout
-                break
-            }
-
+      
             default:
                 break
         }
