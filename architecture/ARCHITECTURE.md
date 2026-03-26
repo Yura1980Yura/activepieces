@@ -95,6 +95,7 @@ packages/shared/src/lib/automation/flows/util/
 ├── connection-validator.ts             # NEW (P1-D01) — validateConnection(), detectCycle()
 ├── graph-node-handles.ts              # NEW (P1-D02) — getHandlesForNodeType(), HandleConfig type
 ├── graph-edge-utils.ts                # NEW (P1-D03) — getEdgeType(), getEdgeLabel(), getEdgeStyle(), classifyEdges(), GRAPH_EDGE_TYPES
+├── graph-canvas-utils.ts              # NEW (P1-D04) — createNodeTypesConfig(), createEdgeTypesConfig(), buildGraphFromFlowVersion(), createIsValidConnection()
 ├── flow-structure-util.ts              # existing — linked-list traversal
 ├── flow-canvas-util.ts                 # existing — legacy position computation
 ├── flow-piece-util.ts                  # existing — piece version utils
@@ -199,6 +200,27 @@ graph-canvas/edges/graph-loop-edge.tsx (P1-D03)
 graph-canvas/edges/graph-branch-edge.tsx (P1-D03)
   → @xyflow/react (BaseEdge, EdgeLabelRenderer, EdgeProps, getBezierPath)
   → @activepieces/shared (getEdgeStyle, GRAPH_EDGE_TYPES)
+
+shared/util/graph-canvas-utils.ts (P1-D04)
+  → shared/flow-version (FlowVersion)
+  → shared/util/graph-converter (linkedListToGraph, GraphNode, GraphEdge)
+  → shared/util/graph-edge-utils (classifyEdges, GRAPH_EDGE_TYPES)
+  → shared/util/auto-layout (computeAutoLayout)
+  → shared/util/connection-validator (validateConnection)
+
+graph-canvas/graph-canvas-provider.tsx (P1-D04)
+  → @xyflow/react (ReactFlowProvider)
+  → @activepieces/shared (GRAPH_EDGE_TYPES)
+  → graph-canvas/nodes/graph-step-node.tsx (GraphStepNode)
+  → graph-canvas/nodes/graph-trigger-node.tsx (GraphTriggerNode)
+  → graph-canvas/edges/graph-edge.tsx (GraphEdge)
+  → graph-canvas/edges/graph-loop-edge.tsx (GraphLoopEdge)
+  → graph-canvas/edges/graph-branch-edge.tsx (GraphBranchEdge)
+
+graph-canvas/index.tsx (P1-D04)
+  → @xyflow/react (ReactFlow, Background, BackgroundVariant, OnNodesChange, OnEdgesChange, OnConnect)
+  → @activepieces/shared (buildGraphFromFlowVersion, createIsValidConnection, FlowVersion)
+  → graph-canvas/graph-canvas-provider.tsx (GraphCanvasProvider, useGraphCanvasContext)
 ```
 
 ---
