@@ -93,6 +93,7 @@ packages/shared/src/lib/automation/flows/util/
 ├── auto-layout.ts                      # NEW (P1-PRE-02) — Dagre auto-layout
 ├── connection-rules.ts                 # NEW (P1-D01) — handle types, ConnectionRule, DEFAULT_CONNECTION_RULES
 ├── connection-validator.ts             # NEW (P1-D01) — validateConnection(), detectCycle()
+├── graph-node-handles.ts              # NEW (P1-D02) — getHandlesForNodeType(), HandleConfig type
 ├── flow-structure-util.ts              # existing — linked-list traversal
 ├── flow-canvas-util.ts                 # existing — legacy position computation
 ├── flow-piece-util.ts                  # existing — piece version utils
@@ -162,6 +163,25 @@ shared/util/connection-rules.ts (P1-D01)
 shared/util/connection-validator.ts (P1-D01)
   → shared/util/graph-converter (GraphNode, GraphEdge)
   → shared/util/connection-rules (ConnectionValidationResult, HANDLE_IDS, NO_INPUT_TYPES, LOOP_OUTPUT_TYPES, BRANCH_OUTPUT_TYPES, isBranchHandle)
+
+shared/util/graph-node-handles.ts (P1-D02)
+  → shared/actions/action (FlowActionType)
+  → shared/triggers/trigger (FlowTriggerType)
+  → shared/util/connection-rules (HANDLE_IDS, LOOP_OUTPUT_TYPES, BRANCH_OUTPUT_TYPES, branchHandle)
+
+graph-canvas/nodes/handles.tsx (P1-D02)
+  → @xyflow/react (Handle, Position)
+  → @activepieces/shared (HANDLE_IDS, branchHandle)
+
+graph-canvas/nodes/graph-step-node.tsx (P1-D02)
+  → @xyflow/react (NodeProps)
+  → @activepieces/shared (FlowActionType, LOOP_OUTPUT_TYPES, BRANCH_OUTPUT_TYPES, GraphNodeData)
+  → graph-canvas/nodes/handles.tsx (GraphInputHandle, GraphOutputHandle, GraphLoopOutputHandle, GraphBranchHandle)
+
+graph-canvas/nodes/graph-trigger-node.tsx (P1-D02)
+  → @xyflow/react (NodeProps)
+  → @activepieces/shared (GraphNodeData)
+  → graph-canvas/nodes/handles.tsx (GraphOutputHandle)
 ```
 
 ---
