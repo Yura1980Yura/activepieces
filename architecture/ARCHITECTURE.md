@@ -94,6 +94,7 @@ packages/shared/src/lib/automation/flows/util/
 ├── connection-rules.ts                 # NEW (P1-D01) — handle types, ConnectionRule, DEFAULT_CONNECTION_RULES
 ├── connection-validator.ts             # NEW (P1-D01) — validateConnection(), detectCycle()
 ├── graph-node-handles.ts              # NEW (P1-D02) — getHandlesForNodeType(), HandleConfig type
+├── graph-edge-utils.ts                # NEW (P1-D03) — getEdgeType(), getEdgeLabel(), getEdgeStyle(), classifyEdges(), GRAPH_EDGE_TYPES
 ├── flow-structure-util.ts              # existing — linked-list traversal
 ├── flow-canvas-util.ts                 # existing — legacy position computation
 ├── flow-piece-util.ts                  # existing — piece version utils
@@ -182,6 +183,22 @@ graph-canvas/nodes/graph-trigger-node.tsx (P1-D02)
   → @xyflow/react (NodeProps)
   → @activepieces/shared (GraphNodeData)
   → graph-canvas/nodes/handles.tsx (GraphOutputHandle)
+
+shared/util/graph-edge-utils.ts (P1-D03)
+  → shared/util/connection-rules (HANDLE_IDS, isBranchHandle)
+  → shared/util/graph-converter (GraphEdge)
+
+graph-canvas/edges/graph-edge.tsx (P1-D03)
+  → @xyflow/react (BaseEdge, EdgeLabelRenderer, EdgeProps, getBezierPath)
+  → @activepieces/shared (getEdgeStyle, GRAPH_EDGE_TYPES)
+
+graph-canvas/edges/graph-loop-edge.tsx (P1-D03)
+  → @xyflow/react (BaseEdge, EdgeProps, getBezierPath)
+  → @activepieces/shared (getEdgeStyle, GRAPH_EDGE_TYPES)
+
+graph-canvas/edges/graph-branch-edge.tsx (P1-D03)
+  → @xyflow/react (BaseEdge, EdgeLabelRenderer, EdgeProps, getBezierPath)
+  → @activepieces/shared (getEdgeStyle, GRAPH_EDGE_TYPES)
 ```
 
 ---
