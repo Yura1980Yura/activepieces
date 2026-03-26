@@ -101,6 +101,42 @@ export function buildGraphFromFlowVersion(flowVersion: FlowVersion): GraphCanvas
 }
 
 /**
+ * Canvas control action identifiers.
+ *
+ * Defines the standard set of controls available in the graph canvas toolbar.
+ * Used by canvas-controls.tsx (P1-D06) to build the control buttons.
+ *
+ * This pure-data constant lives in shared for testability: the React component
+ * in packages/web references these identifiers, and tests in packages/shared
+ * can verify the expected set of controls without requiring a DOM environment.
+ */
+export const CANVAS_CONTROL_ACTIONS = {
+    ZOOM_IN: 'zoom-in',
+    ZOOM_OUT: 'zoom-out',
+    FIT_VIEW: 'fit-view',
+    AUTO_LAYOUT: 'auto-layout',
+} as const
+
+export type CanvasControlAction = typeof CANVAS_CONTROL_ACTIONS[keyof typeof CANVAS_CONTROL_ACTIONS]
+
+/**
+ * Returns the list of canvas control action identifiers in toolbar order.
+ *
+ * The order matches the visual layout of the controls toolbar:
+ * zoom-in, zoom-out, fit-view, [separator], auto-layout.
+ *
+ * @returns array of CanvasControlAction identifiers
+ */
+export function getCanvasControlActions(): CanvasControlAction[] {
+    return [
+        CANVAS_CONTROL_ACTIONS.ZOOM_IN,
+        CANVAS_CONTROL_ACTIONS.ZOOM_OUT,
+        CANVAS_CONTROL_ACTIONS.FIT_VIEW,
+        CANVAS_CONTROL_ACTIONS.AUTO_LAYOUT,
+    ]
+}
+
+/**
  * Connection parameters matching ReactFlow's Connection type.
  */
 export type ConnectionParams = {

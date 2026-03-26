@@ -95,7 +95,7 @@ packages/shared/src/lib/automation/flows/util/
 ├── connection-validator.ts             # NEW (P1-D01) — validateConnection(), detectCycle()
 ├── graph-node-handles.ts              # NEW (P1-D02) — getHandlesForNodeType(), HandleConfig type
 ├── graph-edge-utils.ts                # NEW (P1-D03) — getEdgeType(), getEdgeLabel(), getEdgeStyle(), classifyEdges(), GRAPH_EDGE_TYPES
-├── graph-canvas-utils.ts              # NEW (P1-D04) — createNodeTypesConfig(), createEdgeTypesConfig(), buildGraphFromFlowVersion(), createIsValidConnection()
+├── graph-canvas-utils.ts              # NEW (P1-D04, P1-D06) — createNodeTypesConfig(), createEdgeTypesConfig(), buildGraphFromFlowVersion(), createIsValidConnection(), CANVAS_CONTROL_ACTIONS, getCanvasControlActions()
 ├── graph-state-utils.ts              # NEW (P1-D05) — createInitialGraphData(), syncGraphFromFlowVersion(), syncGraphToFlowVersion(), autoLayoutGraphNodes(), removeGraphNodes(), removeGraphEdges(), addGraphNode(), applyGraphConnect()
 ├── flow-structure-util.ts              # existing — linked-list traversal
 ├── flow-canvas-util.ts                 # existing — legacy position computation
@@ -218,10 +218,20 @@ graph-canvas/graph-canvas-provider.tsx (P1-D04)
   → graph-canvas/edges/graph-loop-edge.tsx (GraphLoopEdge)
   → graph-canvas/edges/graph-branch-edge.tsx (GraphBranchEdge)
 
-graph-canvas/index.tsx (P1-D04)
+graph-canvas/index.tsx (P1-D04, P1-D06)
   → @xyflow/react (ReactFlow, Background, BackgroundVariant, OnNodesChange, OnEdgesChange, OnConnect)
   → @activepieces/shared (buildGraphFromFlowVersion, createIsValidConnection, FlowVersion)
+  → graph-canvas/canvas-controls.tsx (GraphCanvasControls)
   → graph-canvas/graph-canvas-provider.tsx (GraphCanvasProvider, useGraphCanvasContext)
+
+graph-canvas/canvas-controls.tsx (P1-D06)
+  → @activepieces/shared (CANVAS_CONTROL_ACTIONS)
+  → @xyflow/react (useReactFlow)
+  → i18next (t)
+  → lucide-react (Fullscreen, LayoutGrid, Minus, Plus)
+  → @/components/ui/button (Button)
+  → @/components/ui/separator (Separator)
+  → @/components/ui/tooltip (Tooltip, TooltipTrigger, TooltipContent)
 
 shared/util/graph-state-utils.ts (P1-D05)
   → shared/actions/action (FlowActionType)

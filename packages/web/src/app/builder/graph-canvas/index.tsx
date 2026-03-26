@@ -16,6 +16,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import React, { useCallback, useMemo } from 'react';
 
+import { GraphCanvasControls } from './canvas-controls';
 import {
   GraphCanvasProvider,
   useGraphCanvasContext,
@@ -34,6 +35,8 @@ export type GraphCanvasProps = {
   onEdgesChange?: OnEdgesChange;
   onConnect?: OnConnect;
   onNodeClick?: NodeMouseHandler;
+  /** Callback for auto-layout button, wired to autoLayoutGraph() in graph state */
+  onAutoLayout?: () => void;
 };
 
 /**
@@ -47,6 +50,7 @@ const GraphCanvasInner = React.memo(
     onEdgesChange,
     onConnect,
     onNodeClick,
+    onAutoLayout,
   }: GraphCanvasProps) => {
     const { nodeTypes, edgeTypes } = useGraphCanvasContext();
 
@@ -118,6 +122,7 @@ const GraphCanvasInner = React.memo(
             bgColor="var(--builder-background)"
             color="var(--builder-background-pattern)"
           />
+          <GraphCanvasControls onAutoLayout={onAutoLayout} />
         </ReactFlow>
       </div>
     );
@@ -139,6 +144,7 @@ GraphCanvasInner.displayName = 'GraphCanvasInner';
  * - Auto-layout via Dagre when canvasLayout is null
  * - Classified edges (default/loop/branch) with distinct visual styles
  * - Background with dots pattern
+ * - Canvas controls: zoom in/out, fit-to-view, auto-layout button (P1-D06)
  *
  * Wraps GraphCanvasInner with GraphCanvasProvider to supply
  * nodeTypes, edgeTypes, and ReactFlowProvider.

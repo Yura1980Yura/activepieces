@@ -13,6 +13,8 @@ import {
     buildGraphFromFlowVersion,
     createIsValidConnection,
     GRAPH_NODE_TYPE_KEYS,
+    CANVAS_CONTROL_ACTIONS,
+    getCanvasControlActions,
 } from '../../src/lib/automation/flows/util/graph-canvas-utils'
 import { GRAPH_EDGE_TYPES } from '../../src/lib/automation/flows/util/graph-edge-utils'
 import type { FlowTrigger, FlowAction, LoopOnItemsAction, RouterAction } from '../../src'
@@ -98,6 +100,65 @@ function makeRouterAction(
         nextAction,
     } as RouterAction
 }
+
+// === CANVAS_CONTROL_ACTIONS ===
+
+describe('CANVAS_CONTROL_ACTIONS', () => {
+    it('should have exactly 4 control actions', () => {
+        const keys = Object.keys(CANVAS_CONTROL_ACTIONS)
+        expect(keys).toHaveLength(4)
+    })
+
+    it('should include ZOOM_IN with value "zoom-in"', () => {
+        expect(CANVAS_CONTROL_ACTIONS.ZOOM_IN).toBe('zoom-in')
+    })
+
+    it('should include ZOOM_OUT with value "zoom-out"', () => {
+        expect(CANVAS_CONTROL_ACTIONS.ZOOM_OUT).toBe('zoom-out')
+    })
+
+    it('should include FIT_VIEW with value "fit-view"', () => {
+        expect(CANVAS_CONTROL_ACTIONS.FIT_VIEW).toBe('fit-view')
+    })
+
+    it('should include AUTO_LAYOUT with value "auto-layout"', () => {
+        expect(CANVAS_CONTROL_ACTIONS.AUTO_LAYOUT).toBe('auto-layout')
+    })
+})
+
+// === getCanvasControlActions ===
+
+describe('getCanvasControlActions', () => {
+    it('should return 4 actions', () => {
+        const actions = getCanvasControlActions()
+        expect(actions).toHaveLength(4)
+    })
+
+    it('should return actions in toolbar order: zoom-in, zoom-out, fit-view, auto-layout', () => {
+        const actions = getCanvasControlActions()
+        expect(actions).toEqual([
+            'zoom-in',
+            'zoom-out',
+            'fit-view',
+            'auto-layout',
+        ])
+    })
+
+    it('should return all values from CANVAS_CONTROL_ACTIONS', () => {
+        const actions = getCanvasControlActions()
+        const allValues = Object.values(CANVAS_CONTROL_ACTIONS)
+        for (const value of allValues) {
+            expect(actions).toContain(value)
+        }
+    })
+
+    it('should return a new array each call (no shared reference)', () => {
+        const a = getCanvasControlActions()
+        const b = getCanvasControlActions()
+        expect(a).not.toBe(b)
+        expect(a).toEqual(b)
+    })
+})
 
 // === createNodeTypesConfig ===
 
