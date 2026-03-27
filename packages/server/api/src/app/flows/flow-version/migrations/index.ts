@@ -11,6 +11,7 @@ import { migrateV15AgentProviderModel } from './migrate-v15-agent-provider-model
 import { migrateV16AgentPieceToolNames } from './migrate-v16-agent-piece-tool-names'
 import { migrateV17AddLastUpdatedDate } from './migrate-v17-add-last-updated-date'
 import { migrateV18AddCanvasLayout } from './migrate-v18-add-canvas-layout'
+import { migrateV19AddGraphData } from './migrate-v19-add-graph-data'
 import { migrateAgentPieceV2 } from './migrate-v2-agent-piece'
 import { migrateAgentPieceV3 } from './migrate-v3-agent-piece'
 import { migrateAgentPieceV4 } from './migrate-v4-agent-piece'
@@ -50,6 +51,7 @@ const migrations: Migration[] = [
     migrateV16AgentPieceToolNames,
     migrateV17AddLastUpdatedDate,
     migrateV18AddCanvasLayout,
+    migrateV19AddGraphData,
 ] as const
 
 export const flowMigrations = {

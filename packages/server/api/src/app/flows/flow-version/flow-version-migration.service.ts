@@ -29,6 +29,7 @@ export const flowVersionMigrationService = (log: FastifyBaseLogger) => ({
         await flowVersionRepo().update(flowVersion.id, {
             schemaVersion: migratedFlowVersion.schemaVersion,
             ...spreadIfDefined('trigger', migratedFlowVersion.trigger),
+            ...spreadIfDefined('graphData', migratedFlowVersion.graphData),
             ...spreadIfDefined('canvasLayout', migratedFlowVersion.canvasLayout),
             connectionIds: migratedFlowVersion.connectionIds,
             agentIds: migratedFlowVersion.agentIds,

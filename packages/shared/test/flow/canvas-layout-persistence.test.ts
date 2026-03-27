@@ -43,8 +43,8 @@ const sampleCanvasLayout: CanvasLayout = {
 }
 
 describe('LATEST_FLOW_SCHEMA_VERSION', () => {
-    it('should equal 19', () => {
-        expect(LATEST_FLOW_SCHEMA_VERSION).toBe('19')
+    it('should equal 20', () => {
+        expect(LATEST_FLOW_SCHEMA_VERSION).toBe('20')
     })
 })
 

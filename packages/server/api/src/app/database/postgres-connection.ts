@@ -349,6 +349,7 @@ import { AddMissingCascadeDeleteIndices1774100000000 } from './migration/postgre
 import { AddUserIdentityIdIndex1774400000000 } from './migration/postgres/1774400000000-AddUserIdentityIdIndex'
 import { AddUserFkIndices1774449358000 } from './migration/postgres/1774449358000-AddUserFkIndices'
 import { AddCanvasLayoutToFlowVersion1775000000000 } from './migration/postgres/1775000000000-AddCanvasLayoutToFlowVersion'
+import { AddGraphDataToFlowVersion1776000000000 } from './migration/postgres/1776000000000-AddGraphDataToFlowVersion'
 
 const getSslConfig = (): boolean | TlsOptions => {
     const useSsl = system.get(AppSystemProp.POSTGRES_USE_SSL)
@@ -714,6 +715,7 @@ export const getMigrations = (): (new () => MigrationInterface)[] => {
         AddUserIdentityIdIndex1774400000000,
         AddUserFkIndices1774449358000,
         AddCanvasLayoutToFlowVersion1775000000000,
+        AddGraphDataToFlowVersion1776000000000,
     ]
     return migrations
 }

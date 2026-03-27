@@ -2,12 +2,13 @@ import { z } from 'zod'
 import { BaseModelSchema, Nullable } from '../../core/common/base-model'
 import { ApId } from '../../core/common/id-generator'
 import { UserWithMetaInformation } from '../../core/user'
+import { GraphData } from './graph-data'
 import { Note } from './note'
 import { FlowTrigger } from './triggers/trigger'
 
 export type FlowVersionId = ApId
 
-export const LATEST_FLOW_SCHEMA_VERSION = '19'
+export const LATEST_FLOW_SCHEMA_VERSION = '20'
 
 export enum FlowVersionState {
     LOCKED = 'LOCKED',
@@ -34,6 +35,7 @@ export const FlowVersion = z.object({
     flowId: z.string(),
     displayName: z.string(),
     trigger: FlowTrigger,
+    graphData: GraphData.optional(),
     updatedBy: Nullable(z.string()),
     valid: z.boolean(),
     schemaVersion: Nullable(z.string()),
