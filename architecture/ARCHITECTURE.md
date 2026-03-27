@@ -95,7 +95,7 @@ packages/shared/src/lib/automation/flows/util/
 ├── connection-validator.ts             # NEW (P1-D01) — validateConnection(), detectCycle()
 ├── graph-node-handles.ts              # NEW (P1-D02) — getHandlesForNodeType(), HandleConfig type
 ├── graph-edge-utils.ts                # NEW (P1-D03) — getEdgeType(), getEdgeLabel(), getEdgeStyle(), classifyEdges(), GRAPH_EDGE_TYPES
-├── graph-canvas-utils.ts              # NEW (P1-D04, P1-D06) — createNodeTypesConfig(), createEdgeTypesConfig(), buildGraphFromFlowVersion(), createIsValidConnection(), CANVAS_CONTROL_ACTIONS, getCanvasControlActions()
+├── graph-canvas-utils.ts              # NEW (P1-D04, P1-D06, P1-F01) — createNodeTypesConfig(), createEdgeTypesConfig(), buildGraphFromFlowVersion(), createIsValidConnection(), CANVAS_CONTROL_ACTIONS, getCanvasControlActions(), getStepNameFromNode()
 ├── graph-state-utils.ts              # NEW (P1-D05) — createInitialGraphData(), syncGraphFromFlowVersion(), syncGraphToFlowVersion(), autoLayoutGraphNodes(), removeGraphNodes(), removeGraphEdges(), addGraphNode(), applyGraphConnect()
 ├── piece-palette-utils.ts            # NEW (P1-E01) — PALETTE_DRAG_TYPE, createPaletteDragData(), parsePaletteDragData(), createAddActionFromDrop(), filterPaletteItems(), getPaletteItemTestId()
 ├── context-menu-utils.ts             # NEW (P1-E02) — NODE/EDGE/CANVAS_CONTEXT_MENU_ACTIONS, getNodeContextMenuActions(), getEdgeContextMenuActions(), getCanvasContextMenuActions(), getContextMenuTestId()
@@ -112,9 +112,9 @@ packages/shared/src/lib/automation/flows/
 ├── operations/index.ts                 # ADD UPDATE_CANVAS_LAYOUT operation (P1-PRE-01)
 
 packages/web/src/app/builder/
-├── index.tsx                           # REPLACE FlowCanvas with GraphCanvas in ResizablePanel
-│                                       # KEEP ResizablePanel layout + StepSettingsContainer sidebar
-│                                       # StepSettingsContainer stays unchanged — selectStepByName wires it
+├── index.tsx                           # DONE (P1-F01) FlowCanvas replaced with GraphCanvas in ResizablePanel
+│                                       # KEPT ResizablePanel layout + StepSettingsContainer sidebar
+│                                       # selectStepByName wired via handleNodeClick + getStepNameFromNode
 ├── builder-hooks.ts                    # ADD graph state slice
 ├── state/flow-state.ts                # ADD canvasLayout to flow state + operationListener for graph sync
 
@@ -320,6 +320,18 @@ graph-canvas/graph-canvas-provider.tsx (P1-D04, P1-E03)
   → graph-canvas/edges/graph-edge.tsx (GraphEdge)
   → graph-canvas/edges/graph-loop-edge.tsx (GraphLoopEdge)
   → graph-canvas/edges/graph-branch-edge.tsx (GraphBranchEdge)
+
+builder/index.tsx (P1-F01)
+  → @activepieces/shared (FlowAction, FlowActionType, FlowTrigger, FlowTriggerType, FlowVersionState, flowStructureUtil, getStepNameFromNode)
+  → @xyflow/react (Node)
+  → react (useCallback, useEffect, useRef, useState)
+  → builder-hooks (useBuilderStateContext)
+  → flow-canvas/hooks (flowCanvasHooks — useShowBuilderIsSavingWarningBeforeLeaving, useSetSocketListener, useListenToExistingRun, useAnimateSidebar)
+  → flow-canvas/utils/consts (flowCanvasConsts — SIDEBAR_ANIMATION_DURATION)
+  → flow-canvas/widgets/* (PublishFlowReminderWidget, RunInfoWidget, ViewingOldVersionWidget)
+  → graph-canvas/index.tsx (GraphCanvas)
+  → step-settings (StepSettingsContainer)
+  → data-selector (DataSelector)
 ```
 
 ---
