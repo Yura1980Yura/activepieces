@@ -100,6 +100,7 @@ packages/shared/src/lib/automation/flows/util/
 ├── piece-palette-utils.ts            # NEW (P1-E01) — PALETTE_DRAG_TYPE, createPaletteDragData(), parsePaletteDragData(), createAddActionFromDrop(), filterPaletteItems(), getPaletteItemTestId()
 ├── context-menu-utils.ts             # NEW (P1-E02) — NODE/EDGE/CANVAS_CONTEXT_MENU_ACTIONS, getNodeContextMenuActions(), getEdgeContextMenuActions(), getCanvasContextMenuActions(), getContextMenuTestId()
 ├── graph-note-node-utils.ts          # NEW (P1-E03) — NOTE_NODE_TYPE, GraphNoteNodeData, NOTE_COLORS, notesToGraphNodes(), graphNodesToNotes(), getNoteNodeTestId()
+├── feature-flag-utils.ts             # NEW (P1-G01) — USE_GRAPH_CANVAS_KEY, FeatureFlagStorage, getUseGraphCanvas()
 ├── flow-structure-util.ts              # existing — linked-list traversal
 ├── flow-canvas-util.ts                 # existing — legacy position computation
 ├── flow-piece-util.ts                  # existing — piece version utils
@@ -113,9 +114,10 @@ packages/shared/src/lib/automation/flows/
 ├── operations/import-flow.ts           # DONE (P1-F02) canvasLayout propagation via UPDATE_CANVAS_LAYOUT
 
 packages/web/src/app/builder/
-├── index.tsx                           # DONE (P1-F01) FlowCanvas replaced with GraphCanvas in ResizablePanel
+├── index.tsx                           # DONE (P1-F01, P1-G01) Conditional GraphCanvas/FlowCanvas via useGraphCanvas feature flag
 │                                       # KEPT ResizablePanel layout + StepSettingsContainer sidebar
 │                                       # selectStepByName wired via handleNodeClick + getStepNameFromNode
+│                                       # FlowCanvas fallback with CursorPositionProvider + CanvasControls
 ├── builder-hooks.ts                    # ADD graph state slice
 ├── state/flow-state.ts                # ADD canvasLayout to flow state + operationListener for graph sync
 
@@ -327,15 +329,21 @@ graph-canvas/graph-canvas-provider.tsx (P1-D04, P1-E03)
   → graph-canvas/edges/graph-loop-edge.tsx (GraphLoopEdge)
   → graph-canvas/edges/graph-branch-edge.tsx (GraphBranchEdge)
 
-builder/index.tsx (P1-F01)
-  → @activepieces/shared (FlowAction, FlowActionType, FlowTrigger, FlowTriggerType, FlowVersionState, flowStructureUtil, getStepNameFromNode)
+shared/util/feature-flag-utils.ts (P1-G01)
+  → (no imports — pure-logic constants and functions)
+
+builder/index.tsx (P1-F01, P1-G01)
+  → @activepieces/shared (FlowAction, FlowActionType, FlowTrigger, FlowTriggerType, FlowVersionState, flowStructureUtil, getStepNameFromNode, getUseGraphCanvas)
   → @xyflow/react (Node)
-  → react (useCallback, useEffect, useRef, useState)
+  → react (useCallback, useEffect, useMemo, useRef, useState)
   → builder-hooks (useBuilderStateContext)
+  → flow-canvas/canvas-controls (CanvasControls — legacy fallback)
+  → flow-canvas/index (FlowCanvas — legacy fallback)
   → flow-canvas/hooks (flowCanvasHooks — useShowBuilderIsSavingWarningBeforeLeaving, useSetSocketListener, useListenToExistingRun, useAnimateSidebar)
   → flow-canvas/utils/consts (flowCanvasConsts — SIDEBAR_ANIMATION_DURATION)
   → flow-canvas/widgets/* (PublishFlowReminderWidget, RunInfoWidget, ViewingOldVersionWidget)
   → graph-canvas/index.tsx (GraphCanvas)
+  → state/cursor-position-context (CursorPositionProvider — legacy fallback)
   → step-settings (StepSettingsContainer)
   → data-selector (DataSelector)
 ```
