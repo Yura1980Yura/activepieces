@@ -138,12 +138,20 @@ function _importFlow(flowVersion: FlowVersion, request: ImportFlowRequest): Flow
 
     const importOperations = _getImportOperationsForSteps(request.trigger)
  
+    const canvasLayoutOperations: FlowOperationRequest[] = request.canvasLayout !== undefined
+        ? [{
+            type: FlowOperationType.UPDATE_CANVAS_LAYOUT as const,
+            request: { canvasLayout: request.canvasLayout ?? null },
+        }]
+        : []
+
     return [
         createChangeNameOperation(request.displayName),
         ...deleteOperations,
         createUpdateTriggerOperation(request.trigger),
         ...importOperations,
         ..._getImportOperationsForNotes(flowVersion, request),
+        ...canvasLayoutOperations,
     ]
 }
 

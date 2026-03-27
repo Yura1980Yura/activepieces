@@ -100,6 +100,7 @@ export const flowVersionService = (log: FastifyBaseLogger) => ({
                         displayName: previousVersion.displayName,
                         schemaVersion: previousVersion.schemaVersion,
                         notes: previousVersion.notes,
+                        canvasLayout: previousVersion.canvasLayout ?? null,
                     },
                 }]
                 break
@@ -315,6 +316,7 @@ export const flowVersionService = (log: FastifyBaseLogger) => ({
             valid: false,
             state: FlowVersionState.DRAFT,
             notes: request.notes,
+            canvasLayout: null,
         }
         return flowVersionRepo().save(flowVersion)
     },

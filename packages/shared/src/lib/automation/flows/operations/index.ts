@@ -128,6 +128,7 @@ export const ImportFlowRequest = z.object({
     trigger: FlowTrigger,
     schemaVersion: Nullable(z.string()),
     notes: Nullable(z.array(Note)),
+    canvasLayout: Nullable(CanvasLayout).optional(),
 })
 
 export type ImportFlowRequest = z.infer<typeof ImportFlowRequest>
