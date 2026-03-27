@@ -98,6 +98,7 @@ packages/shared/src/lib/automation/flows/util/
 ├── graph-canvas-utils.ts              # NEW (P1-D04, P1-D06) — createNodeTypesConfig(), createEdgeTypesConfig(), buildGraphFromFlowVersion(), createIsValidConnection(), CANVAS_CONTROL_ACTIONS, getCanvasControlActions()
 ├── graph-state-utils.ts              # NEW (P1-D05) — createInitialGraphData(), syncGraphFromFlowVersion(), syncGraphToFlowVersion(), autoLayoutGraphNodes(), removeGraphNodes(), removeGraphEdges(), addGraphNode(), applyGraphConnect()
 ├── piece-palette-utils.ts            # NEW (P1-E01) — PALETTE_DRAG_TYPE, createPaletteDragData(), parsePaletteDragData(), createAddActionFromDrop(), filterPaletteItems(), getPaletteItemTestId()
+├── context-menu-utils.ts             # NEW (P1-E02) — NODE/EDGE/CANVAS_CONTEXT_MENU_ACTIONS, getNodeContextMenuActions(), getEdgeContextMenuActions(), getCanvasContextMenuActions(), getContextMenuTestId()
 ├── flow-structure-util.ts              # existing — linked-list traversal
 ├── flow-canvas-util.ts                 # existing — legacy position computation
 ├── flow-piece-util.ts                  # existing — piece version utils
@@ -266,11 +267,32 @@ graph-canvas/sidebar/piece-palette.tsx (P1-E01)
   → @/components/ui/scroll-area (ScrollArea)
   → graph-canvas/sidebar/piece-palette-item.tsx (PiecePaletteItem)
 
-graph-canvas/index.tsx (P1-D04, P1-D06, P1-E01)
+graph-canvas/index.tsx (P1-D04, P1-D06, P1-E01, P1-E02)
   → @activepieces/shared (buildGraphFromFlowVersion, createIsValidConnection, parsePaletteDragData, PALETTE_DRAG_TYPE, FlowVersion, PaletteDragData)
-  → @xyflow/react (ReactFlow, Background, BackgroundVariant, useReactFlow, OnNodesChange, OnEdgesChange, OnConnect)
+  → @xyflow/react (ReactFlow, Background, BackgroundVariant, useReactFlow, OnNodesChange, OnEdgesChange, OnConnect, Node, Edge)
   → graph-canvas/canvas-controls.tsx (GraphCanvasControls)
   → graph-canvas/graph-canvas-provider.tsx (GraphCanvasProvider, useGraphCanvasContext)
+
+shared/util/context-menu-utils.ts (P1-E02)
+  → (no imports — pure-logic constants and functions)
+
+graph-canvas/context-menu/node-context-menu.tsx (P1-E02)
+  → @activepieces/shared (getNodeContextMenuActions, getContextMenuTestId, NODE_CONTEXT_MENU_ACTIONS)
+  → @/components/ui/context-menu (ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger)
+  → i18next (t)
+  → lucide-react (CopyPlus, Trash)
+
+graph-canvas/context-menu/edge-context-menu.tsx (P1-E02)
+  → @activepieces/shared (getEdgeContextMenuActions, getContextMenuTestId, EDGE_CONTEXT_MENU_ACTIONS)
+  → @/components/ui/context-menu (ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger)
+  → i18next (t)
+  → lucide-react (Trash)
+
+graph-canvas/context-menu/canvas-context-menu.tsx (P1-E02)
+  → @activepieces/shared (getCanvasContextMenuActions, getContextMenuTestId, CANVAS_CONTEXT_MENU_ACTIONS)
+  → @/components/ui/context-menu (ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger)
+  → i18next (t)
+  → lucide-react (ClipboardPaste, MousePointerSquareDashed)
 ```
 
 ---
