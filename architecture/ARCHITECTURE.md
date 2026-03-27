@@ -108,8 +108,9 @@ packages/shared/src/lib/automation/flows/util/
 ### MODIFY files
 ```
 packages/shared/src/lib/automation/flows/
-├── flow-version.ts                     # ADD canvasLayout field to FlowVersion type (P1-PRE-01)
-├── operations/index.ts                 # ADD UPDATE_CANVAS_LAYOUT operation (P1-PRE-01)
+├── flow-version.ts                     # DONE (P1-PRE-01, P1-F02) canvasLayout field + LATEST_FLOW_SCHEMA_VERSION='19'
+├── operations/index.ts                 # DONE (P1-PRE-01, P1-F02) UPDATE_CANVAS_LAYOUT + ImportFlowRequest.canvasLayout
+├── operations/import-flow.ts           # DONE (P1-F02) canvasLayout propagation via UPDATE_CANVAS_LAYOUT
 
 packages/web/src/app/builder/
 ├── index.tsx                           # DONE (P1-F01) FlowCanvas replaced with GraphCanvas in ResizablePanel
@@ -119,7 +120,12 @@ packages/web/src/app/builder/
 ├── state/flow-state.ts                # ADD canvasLayout to flow state + operationListener for graph sync
 
 packages/server/api/src/app/flows/
-├── flow-version/                       # ADD canvasLayout to flow version schema
+├── flow-version/
+│   ├── flow-version-entity.ts          # DONE (P1-F02) canvasLayout jsonb column (nullable)
+│   ├── flow-version.service.ts         # DONE (P1-F02) createEmptyVersion + USE_AS_DRAFT with canvasLayout
+│   └── migrations/
+│       ├── index.ts                    # DONE (P1-F02) registered migrateV18AddCanvasLayout
+│       └── migrate-v18-add-canvas-layout.ts  # DONE (P1-F02) schema v18->v19
 ```
 
 ### DEPRECATE files (kept as fallback behind feature flag, deletion deferred to Phase 2)
