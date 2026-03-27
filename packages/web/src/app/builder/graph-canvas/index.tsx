@@ -15,6 +15,7 @@ import {
   type OnEdgesChange,
   type OnConnect,
   type Node,
+  type Edge,
   type NodeMouseHandler,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -46,6 +47,12 @@ export type GraphCanvasProps = {
     dragData: PaletteDragData,
     position: { x: number; y: number },
   ) => void;
+  /** Callback for right-click on a node (P1-E02) */
+  onNodeContextMenu?: (event: React.MouseEvent, node: Node) => void;
+  /** Callback for right-click on an edge (P1-E02) */
+  onEdgeContextMenu?: (event: React.MouseEvent, edge: Edge) => void;
+  /** Callback for right-click on canvas background (P1-E02) */
+  onPaneContextMenu?: (event: React.MouseEvent) => void;
 };
 
 /**
@@ -61,6 +68,9 @@ const GraphCanvasInner = React.memo(
     onNodeClick,
     onAutoLayout,
     onPieceDrop,
+    onNodeContextMenu,
+    onEdgeContextMenu,
+    onPaneContextMenu,
   }: GraphCanvasProps) => {
     const { nodeTypes, edgeTypes } = useGraphCanvasContext();
     const reactFlowInstance = useReactFlow();
@@ -151,6 +161,9 @@ const GraphCanvasInner = React.memo(
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onNodeClick={onNodeClick}
+          onNodeContextMenu={onNodeContextMenu}
+          onEdgeContextMenu={onEdgeContextMenu}
+          onPaneContextMenu={onPaneContextMenu}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
           isValidConnection={isValidConnection}
@@ -193,6 +206,7 @@ GraphCanvasInner.displayName = 'GraphCanvasInner';
  * - Background with dots pattern
  * - Canvas controls: zoom in/out, fit-to-view, auto-layout button (P1-D06)
  * - Piece palette drop target: accepts HTML5 drag from sidebar (P1-E01)
+ * - Context menu events: node, edge, canvas right-click handlers (P1-E02)
  *
  * Wraps GraphCanvasInner with GraphCanvasProvider to supply
  * nodeTypes, edgeTypes, and ReactFlowProvider.
