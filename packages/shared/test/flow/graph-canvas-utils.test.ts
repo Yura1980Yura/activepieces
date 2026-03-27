@@ -6,6 +6,7 @@ import {
     RouterExecutionType,
     BranchExecutionType,
     BranchOperator,
+    NoteColorVariant,
 } from '../../src'
 import {
     createNodeTypesConfig,
@@ -17,7 +18,8 @@ import {
     getCanvasControlActions,
 } from '../../src/lib/automation/flows/util/graph-canvas-utils'
 import { GRAPH_EDGE_TYPES } from '../../src/lib/automation/flows/util/graph-edge-utils'
-import type { FlowTrigger, FlowAction, LoopOnItemsAction, RouterAction } from '../../src'
+import { NOTE_NODE_TYPE } from '../../src/lib/automation/flows/util/graph-note-node-utils'
+import type { FlowTrigger, FlowAction, LoopOnItemsAction, RouterAction, Note } from '../../src'
 
 // === Test Fixtures ===
 
@@ -163,10 +165,10 @@ describe('getCanvasControlActions', () => {
 // === createNodeTypesConfig ===
 
 describe('createNodeTypesConfig', () => {
-    it('should return exactly 4 keys: trigger, action, loop, router', () => {
+    it('should return exactly 5 keys: trigger, action, loop, router, note', () => {
         const config = createNodeTypesConfig()
         const keys = Object.keys(config).sort()
-        expect(keys).toEqual(['action', 'loop', 'router', 'trigger'])
+        expect(keys).toEqual(['action', 'loop', 'note', 'router', 'trigger'])
     })
 
     it('should have trigger key mapping to "trigger"', () => {
@@ -187,6 +189,15 @@ describe('createNodeTypesConfig', () => {
     it('should have router key mapping to "router"', () => {
         const config = createNodeTypesConfig()
         expect(config[GRAPH_NODE_TYPE_KEYS.ROUTER]).toBe('router')
+    })
+
+    it('should have note key mapping to "note"', () => {
+        const config = createNodeTypesConfig()
+        expect(config[GRAPH_NODE_TYPE_KEYS.NOTE]).toBe('note')
+    })
+
+    it('should have note key equal to NOTE_NODE_TYPE constant', () => {
+        expect(GRAPH_NODE_TYPE_KEYS.NOTE).toBe(NOTE_NODE_TYPE)
     })
 })
 
@@ -315,6 +326,95 @@ describe('buildGraphFromFlowVersion', () => {
         //        loop_1->router_1(output), router_1->b0_child(branch-0),
         //        router_1->b1_child(branch-1) = 5
         expect(result.edges).toHaveLength(5)
+    })
+
+    it('should include note nodes from FlowVersion.notes[]', () => {
+        const testNote: Note = {
+            id: 'note-1',
+            content: 'A sticky note',
+            ownerId: 'user-1',
+            color: NoteColorVariant.YELLOW,
+            position: { x: 500, y: 300 },
+            size: { width: 200, height: 150 },
+            createdAt: '2026-03-27T00:00:00Z',
+            updatedAt: '2026-03-27T00:00:00Z',
+        }
+        const flow: FlowVersion = {
+            ...baseFlowVersion,
+            notes: [testNote],
+        }
+        const result = buildGraphFromFlowVersion(flow)
+        // 1 trigger + 1 note = 2 nodes
+        expect(result.nodes).toHaveLength(2)
+        const noteNode = result.nodes.find(n => n.type === 'note')
+        expect(noteNode).toBeDefined()
+        expect(noteNode!.id).toBe('note-1')
+        expect(noteNode!.position).toEqual({ x: 500, y: 300 })
+    })
+
+    it('should include multiple notes alongside action nodes', () => {
+        const step1 = makeCodeAction('step_1')
+        const notes: Note[] = [
+            {
+                id: 'note-a',
+                content: 'First note',
+                ownerId: null,
+                color: NoteColorVariant.BLUE,
+                position: { x: 400, y: 100 },
+                size: { width: 150, height: 100 },
+                createdAt: '2026-03-27T00:00:00Z',
+                updatedAt: '2026-03-27T00:00:00Z',
+            },
+            {
+                id: 'note-b',
+                content: 'Second note',
+                ownerId: null,
+                color: NoteColorVariant.RED,
+                position: { x: 600, y: 200 },
+                size: { width: 180, height: 120 },
+                createdAt: '2026-03-27T00:00:00Z',
+                updatedAt: '2026-03-27T00:00:00Z',
+            },
+        ]
+        const flow: FlowVersion = {
+            ...baseFlowVersion,
+            trigger: { ...baseTrigger, nextAction: step1 },
+            notes,
+        }
+        const result = buildGraphFromFlowVersion(flow)
+        // 2 flow nodes (trigger + step_1) + 2 notes = 4
+        expect(result.nodes).toHaveLength(4)
+        const noteNodes = result.nodes.filter(n => n.type === 'note')
+        expect(noteNodes).toHaveLength(2)
+    })
+
+    it('should not add edges for note nodes', () => {
+        const testNote: Note = {
+            id: 'note-1',
+            content: 'Orphan note',
+            ownerId: null,
+            color: NoteColorVariant.GREEN,
+            position: { x: 200, y: 200 },
+            size: { width: 200, height: 150 },
+            createdAt: '2026-03-27T00:00:00Z',
+            updatedAt: '2026-03-27T00:00:00Z',
+        }
+        const flow: FlowVersion = {
+            ...baseFlowVersion,
+            notes: [testNote],
+        }
+        const result = buildGraphFromFlowVersion(flow)
+        // No edges for notes
+        expect(result.edges).toHaveLength(0)
+    })
+
+    it('should handle empty notes array', () => {
+        const flow: FlowVersion = {
+            ...baseFlowVersion,
+            notes: [],
+        }
+        const result = buildGraphFromFlowVersion(flow)
+        expect(result.nodes).toHaveLength(1) // trigger only
     })
 })
 

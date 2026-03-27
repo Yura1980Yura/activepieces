@@ -1,10 +1,11 @@
-import { GRAPH_EDGE_TYPES } from '@activepieces/shared';
+import { GRAPH_EDGE_TYPES, NOTE_NODE_TYPE } from '@activepieces/shared';
 import { ReactFlowProvider } from '@xyflow/react';
 import React, { createContext, useContext, useMemo } from 'react';
 
 import { GraphEdge } from './edges/graph-edge';
 import { GraphBranchEdge } from './edges/graph-branch-edge';
 import { GraphLoopEdge } from './edges/graph-loop-edge';
+import { GraphNoteNode } from './nodes/graph-note-node';
 import { GraphStepNode } from './nodes/graph-step-node';
 import { GraphTriggerNode } from './nodes/graph-trigger-node';
 
@@ -17,6 +18,7 @@ import { GraphTriggerNode } from './nodes/graph-trigger-node';
  * - 'action'  -> GraphStepNode   (input + output)
  * - 'loop'    -> GraphStepNode   (input + output + loop-output, handles differ via action type)
  * - 'router'  -> GraphStepNode   (input + output + branch-N, handles differ via action type)
+ * - 'note'    -> GraphNoteNode   (P1-E03, free-form sticky note, no handles)
  *
  * GraphStepNode handles all non-trigger types because it inspects
  * LOOP_OUTPUT_TYPES and BRANCH_OUTPUT_TYPES to render conditional handles.
@@ -62,6 +64,7 @@ export const GraphCanvasProvider: React.FC<{ children: React.ReactNode }> = ({
       action: GraphStepNode,
       loop: GraphStepNode,
       router: GraphStepNode,
+      [NOTE_NODE_TYPE]: GraphNoteNode,
     }),
     [],
   );

@@ -3,6 +3,7 @@ import { computeAutoLayout } from './auto-layout'
 import { validateConnection } from './connection-validator'
 import { classifyEdges, GRAPH_EDGE_TYPES } from './graph-edge-utils'
 import { linkedListToGraph, GraphNode, GraphEdge } from './graph-converter'
+import { notesToGraphNodes, NOTE_NODE_TYPE } from './graph-note-node-utils'
 
 /**
  * Node type keys for the ReactFlow nodeTypes registry.
@@ -16,12 +17,14 @@ import { linkedListToGraph, GraphNode, GraphEdge } from './graph-converter'
  * - 'action'  -> GraphStepNode   (P1-D02)
  * - 'loop'    -> GraphStepNode   (P1-D02, same component, different handles)
  * - 'router'  -> GraphStepNode   (P1-D02, same component, branch handles)
+ * - 'note'    -> GraphNoteNode   (P1-E03, free-form sticky note, no handles)
  */
 export const GRAPH_NODE_TYPE_KEYS = {
     TRIGGER: 'trigger',
     ACTION: 'action',
     LOOP: 'loop',
     ROUTER: 'router',
+    NOTE: NOTE_NODE_TYPE,
 } as const
 
 /**
@@ -39,6 +42,7 @@ export function createNodeTypesConfig(): Record<string, string> {
         [GRAPH_NODE_TYPE_KEYS.ACTION]: GRAPH_NODE_TYPE_KEYS.ACTION,
         [GRAPH_NODE_TYPE_KEYS.LOOP]: GRAPH_NODE_TYPE_KEYS.LOOP,
         [GRAPH_NODE_TYPE_KEYS.ROUTER]: GRAPH_NODE_TYPE_KEYS.ROUTER,
+        [GRAPH_NODE_TYPE_KEYS.NOTE]: GRAPH_NODE_TYPE_KEYS.NOTE,
     }
 }
 
@@ -75,12 +79,17 @@ export type GraphCanvasData = {
  * 1. linkedListToGraph() -- traverse trigger->nextAction chain to build nodes + edges
  * 2. classifyEdges() -- annotate each edge with a type (default/loop/branch)
  * 3. computeAutoLayout() -- apply Dagre layout when canvasLayout is null
+ * 4. notesToGraphNodes() -- convert FlowVersion.notes[] to note-type graph nodes (P1-E03)
  *
  * When canvasLayout exists in the FlowVersion, stored positions are used directly
  * (applied by linkedListToGraph). When null, Dagre computes initial positions.
  *
+ * Note nodes are appended after action/trigger nodes. They use their own stored
+ * positions from Note.position and are excluded from auto-layout (they are not
+ * part of the execution flow).
+ *
  * @param flowVersion - the FlowVersion to convert
- * @returns GraphCanvasData with nodes and typed edges
+ * @returns GraphCanvasData with nodes (including notes) and typed edges
  */
 export function buildGraphFromFlowVersion(flowVersion: FlowVersion): GraphCanvasData {
     const { nodes, edges } = linkedListToGraph(flowVersion)
@@ -97,7 +106,12 @@ export function buildGraphFromFlowVersion(flowVersion: FlowVersion): GraphCanvas
         }
     }
 
-    return { nodes, edges: typedEdges }
+    // Append note nodes from FlowVersion.notes[] (P1-E03)
+    // Notes have their own stored positions and are not part of the execution graph.
+    const noteNodes = notesToGraphNodes(flowVersion.notes ?? [])
+    const allNodes = [...nodes, ...noteNodes]
+
+    return { nodes: allNodes, edges: typedEdges }
 }
 
 /**
