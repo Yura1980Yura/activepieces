@@ -5,12 +5,13 @@ import {
   FlowTriggerType,
   FlowVersionState,
   flowStructureUtil,
+  getStepNameFromNode,
 } from '@activepieces/shared';
-import { useEffect, useRef, useState } from 'react';
+import { type Node } from '@xyflow/react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useBuilderStateContext } from '@/app/builder/builder-hooks';
 import { DataSelector } from '@/app/builder/data-selector';
-import { CanvasControls } from '@/app/builder/flow-canvas/canvas-controls';
 import { StepSettingsProvider } from '@/app/builder/step-settings/step-settings-context';
 import { RightSideBarType } from '@/app/builder/types';
 import { ChatDrawer } from '@/app/routes/chat/chat-drawer';
@@ -26,15 +27,14 @@ import { useElementSize } from '@/hooks/use-element-size';
 import { cn } from '@/lib/utils';
 
 import { BuilderHeader } from './builder-header/builder-header';
-import { FlowCanvas } from './flow-canvas';
 import { flowCanvasHooks } from './flow-canvas/hooks';
 import { flowCanvasConsts } from './flow-canvas/utils/consts';
 import PublishFlowReminderWidget from './flow-canvas/widgets/publish-flow-reminder-widget';
 import { RunInfoWidget } from './flow-canvas/widgets/run-info-widget';
 import { ViewingOldVersionWidget } from './flow-canvas/widgets/viewing-old-version-widget';
 import { FlowVersionsList } from './flow-versions';
+import { GraphCanvas } from './graph-canvas';
 import { RunsList } from './run-list';
-import { CursorPositionProvider } from './state/cursor-position-context';
 import { StepSettingsContainer } from './step-settings';
 import { ResizableVerticalPanelsProvider } from './step-settings/resizable-vertical-panels-context';
 const animateResizeClassName = `transition-all `;
@@ -47,6 +47,11 @@ const BuilderPage = () => {
     selectedStepName,
     removeAllStepTestsListeners,
     selectedStep,
+    selectStepByName,
+    onGraphNodesChange,
+    onGraphEdgesChange,
+    onGraphConnect,
+    autoLayoutGraph,
   ] = useBuilderStateContext((state) => [
     state.flowVersion,
     state.rightSidebar,
@@ -56,6 +61,11 @@ const BuilderPage = () => {
       state.selectedStep ?? '',
       state.flowVersion.trigger,
     ),
+    state.selectStepByName,
+    state.onGraphNodesChange,
+    state.onGraphEdgesChange,
+    state.onGraphConnect,
+    state.autoLayoutGraph,
   ]);
   useEffect(() => {
     return () => {
@@ -85,8 +95,15 @@ const BuilderPage = () => {
   flowCanvasHooks.useSetSocketListener(refetchPiece);
   flowCanvasHooks.useListenToExistingRun();
 
-  const [hasCanvasBeenInitialised, setHasCanvasBeenInitialised] =
-    useState(false);
+  const handleNodeClick = useCallback(
+    (_event: React.MouseEvent, node: Node) => {
+      const stepName = getStepNameFromNode(node);
+      if (stepName) {
+        selectStepByName(stepName);
+      }
+    },
+    [selectStepByName],
+  );
 
   return (
     <div className="flex h-full w-full flex-col relative max-h-[100vh]">
@@ -96,24 +113,18 @@ const BuilderPage = () => {
       <ResizablePanelGroup orientation="horizontal">
         <ResizablePanel defaultSize="100%" id="flow-canvas">
           <div ref={middlePanelRef} className="relative h-full w-full">
-            <CursorPositionProvider>
-              <FlowCanvas
-                setHasCanvasBeenInitialised={setHasCanvasBeenInitialised}
-              ></FlowCanvas>
-            </CursorPositionProvider>
+            <GraphCanvas
+              flowVersion={flowVersion}
+              onNodesChange={onGraphNodesChange}
+              onEdgesChange={onGraphEdgesChange}
+              onConnect={onGraphConnect}
+              onNodeClick={handleNodeClick}
+              onAutoLayout={autoLayoutGraph}
+            />
 
             <PublishFlowReminderWidget />
             <RunInfoWidget />
             <ViewingOldVersionWidget />
-            {middlePanelRef.current &&
-              middlePanelRef.current.clientWidth > 0 && (
-                <CanvasControls
-                  canvasHeight={middlePanelRef.current?.clientHeight ?? 0}
-                  canvasWidth={middlePanelRef.current?.clientWidth ?? 0}
-                  hasCanvasBeenInitialised={hasCanvasBeenInitialised}
-                  selectedStep={selectedStepName}
-                ></CanvasControls>
-              )}
 
             <ShowPoweredBy
               position="absolute"

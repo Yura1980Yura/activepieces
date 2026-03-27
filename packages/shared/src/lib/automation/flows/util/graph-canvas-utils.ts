@@ -170,6 +170,27 @@ export type ConnectionParams = {
  * @param edges - current graph edges
  * @returns callback that returns true for valid connections, false otherwise
  */
+/**
+ * Extract the step name from a graph node for step selection.
+ *
+ * Used by the builder's onNodeClick handler to map a ReactFlow node click
+ * to a step selection via selectStepByName(). Returns null for note nodes
+ * (notes are not execution steps and cannot be selected in the step settings panel).
+ *
+ * @param node - the clicked GraphNode
+ * @returns step name string, or null if the node is a note or has no step data
+ */
+export function getStepNameFromNode(node: GraphNode): string | null {
+    if (node.type === NOTE_NODE_TYPE) {
+        return null
+    }
+    const data = node.data as Record<string, unknown> | undefined
+    if (!data || typeof data['stepName'] !== 'string') {
+        return null
+    }
+    return data['stepName']
+}
+
 export function createIsValidConnection(
     nodes: GraphNode[],
     edges: GraphEdge[],
