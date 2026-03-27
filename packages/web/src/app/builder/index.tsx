@@ -6,9 +6,10 @@ import {
   FlowVersionState,
   flowStructureUtil,
   getStepNameFromNode,
+  getUseGraphCanvas,
 } from '@activepieces/shared';
 import { type Node } from '@xyflow/react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useBuilderStateContext } from '@/app/builder/builder-hooks';
 import { DataSelector } from '@/app/builder/data-selector';
@@ -27,6 +28,8 @@ import { useElementSize } from '@/hooks/use-element-size';
 import { cn } from '@/lib/utils';
 
 import { BuilderHeader } from './builder-header/builder-header';
+import { CanvasControls } from './flow-canvas/canvas-controls';
+import { FlowCanvas } from './flow-canvas';
 import { flowCanvasHooks } from './flow-canvas/hooks';
 import { flowCanvasConsts } from './flow-canvas/utils/consts';
 import PublishFlowReminderWidget from './flow-canvas/widgets/publish-flow-reminder-widget';
@@ -35,12 +38,18 @@ import { ViewingOldVersionWidget } from './flow-canvas/widgets/viewing-old-versi
 import { FlowVersionsList } from './flow-versions';
 import { GraphCanvas } from './graph-canvas';
 import { RunsList } from './run-list';
+import { CursorPositionProvider } from './state/cursor-position-context';
 import { StepSettingsContainer } from './step-settings';
 import { ResizableVerticalPanelsProvider } from './step-settings/resizable-vertical-panels-context';
 const animateResizeClassName = `transition-all `;
 
 const BuilderPage = () => {
   const { platform } = platformHooks.useCurrentPlatform();
+  // Feature flag: read once on mount. Toggle via localStorage.setItem('useGraphCanvas', 'false')
+  const useGraphCanvas = useMemo(
+    () => getUseGraphCanvas(window.localStorage),
+    [],
+  );
   const [
     flowVersion,
     rightSidebar,
@@ -95,6 +104,10 @@ const BuilderPage = () => {
   flowCanvasHooks.useSetSocketListener(refetchPiece);
   flowCanvasHooks.useListenToExistingRun();
 
+  // FlowCanvas (legacy) needs hasCanvasBeenInitialised state
+  const [hasCanvasBeenInitialised, setHasCanvasBeenInitialised] =
+    useState(false);
+
   const handleNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
       const stepName = getStepNameFromNode(node);
@@ -113,18 +126,37 @@ const BuilderPage = () => {
       <ResizablePanelGroup orientation="horizontal">
         <ResizablePanel defaultSize="100%" id="flow-canvas">
           <div ref={middlePanelRef} className="relative h-full w-full">
-            <GraphCanvas
-              flowVersion={flowVersion}
-              onNodesChange={onGraphNodesChange}
-              onEdgesChange={onGraphEdgesChange}
-              onConnect={onGraphConnect}
-              onNodeClick={handleNodeClick}
-              onAutoLayout={autoLayoutGraph}
-            />
+            {useGraphCanvas ? (
+              <GraphCanvas
+                flowVersion={flowVersion}
+                onNodesChange={onGraphNodesChange}
+                onEdgesChange={onGraphEdgesChange}
+                onConnect={onGraphConnect}
+                onNodeClick={handleNodeClick}
+                onAutoLayout={autoLayoutGraph}
+              />
+            ) : (
+              <CursorPositionProvider>
+                <FlowCanvas
+                  setHasCanvasBeenInitialised={setHasCanvasBeenInitialised}
+                />
+              </CursorPositionProvider>
+            )}
 
             <PublishFlowReminderWidget />
             <RunInfoWidget />
             <ViewingOldVersionWidget />
+
+            {!useGraphCanvas &&
+              middlePanelRef.current &&
+              middlePanelRef.current.clientWidth > 0 && (
+                <CanvasControls
+                  canvasHeight={middlePanelRef.current?.clientHeight ?? 0}
+                  canvasWidth={middlePanelRef.current?.clientWidth ?? 0}
+                  hasCanvasBeenInitialised={hasCanvasBeenInitialised}
+                  selectedStep={selectedStepName}
+                />
+              )}
 
             <ShowPoweredBy
               position="absolute"
