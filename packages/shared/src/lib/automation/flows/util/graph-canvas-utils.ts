@@ -1,8 +1,7 @@
 import { FlowVersion } from '../flow-version'
-import { computeAutoLayout } from './auto-layout'
 import { validateConnection } from './connection-validator'
 import { classifyEdges, GRAPH_EDGE_TYPES } from './graph-edge-utils'
-import { linkedListToGraph, GraphNode, GraphEdge } from './graph-converter'
+import { linkedListToGraph, migrateCanvasLayout, GraphNode, GraphEdge } from './graph-converter'
 import { notesToGraphNodes, NOTE_NODE_TYPE } from './graph-note-node-utils'
 
 /**
@@ -66,10 +65,14 @@ export function createEdgeTypesConfig(): Record<string, string> {
 /**
  * Result of building a graph from a FlowVersion.
  * Contains nodes and edges ready for ReactFlow consumption.
+ *
+ * `shouldPersistLayout` is true when the layout was computed or partially filled
+ * (P1-F03 migration) and should be saved back via UPDATE_CANVAS_LAYOUT.
  */
 export type GraphCanvasData = {
     nodes: GraphNode[]
     edges: Array<GraphEdge & { type: string }>
+    shouldPersistLayout: boolean
 }
 
 /**
@@ -78,31 +81,30 @@ export type GraphCanvasData = {
  * Pipeline:
  * 1. linkedListToGraph() -- traverse trigger->nextAction chain to build nodes + edges
  * 2. classifyEdges() -- annotate each edge with a type (default/loop/branch)
- * 3. computeAutoLayout() -- apply Dagre layout when canvasLayout is null
+ * 3. migrateCanvasLayout() -- compute Dagre layout when canvasLayout is null or partial (P1-F03)
  * 4. notesToGraphNodes() -- convert FlowVersion.notes[] to note-type graph nodes (P1-E03)
  *
- * When canvasLayout exists in the FlowVersion, stored positions are used directly
- * (applied by linkedListToGraph). When null, Dagre computes initial positions.
+ * When canvasLayout exists with all node positions, stored positions are used directly.
+ * When null or partial, Dagre auto-layout fills missing positions and signals
+ * shouldPersistLayout=true so the caller can save computed positions.
  *
  * Note nodes are appended after action/trigger nodes. They use their own stored
  * positions from Note.position and are excluded from auto-layout (they are not
  * part of the execution flow).
  *
  * @param flowVersion - the FlowVersion to convert
- * @returns GraphCanvasData with nodes (including notes) and typed edges
+ * @returns GraphCanvasData with nodes (including notes), typed edges, and persistence flag
  */
 export function buildGraphFromFlowVersion(flowVersion: FlowVersion): GraphCanvasData {
     const { nodes, edges } = linkedListToGraph(flowVersion)
     const typedEdges = classifyEdges(edges)
 
-    // Apply auto-layout when no stored positions are available
-    if (!flowVersion.canvasLayout) {
-        const layout = computeAutoLayout(nodes, edges)
-        for (const node of nodes) {
-            const pos = layout.positions[node.id]
-            if (pos) {
-                node.position = { x: pos.x, y: pos.y }
-            }
+    // Migrate canvas layout: compute auto-layout for null/partial canvasLayout (P1-F03)
+    const migration = migrateCanvasLayout(nodes, edges, flowVersion.canvasLayout ?? null)
+    for (const node of nodes) {
+        const pos = migration.positions[node.id]
+        if (pos) {
+            node.position = { x: pos.x, y: pos.y }
         }
     }
 
@@ -111,7 +113,7 @@ export function buildGraphFromFlowVersion(flowVersion: FlowVersion): GraphCanvas
     const noteNodes = notesToGraphNodes(flowVersion.notes ?? [])
     const allNodes = [...nodes, ...noteNodes]
 
-    return { nodes: allNodes, edges: typedEdges }
+    return { nodes: allNodes, edges: typedEdges, shouldPersistLayout: migration.shouldPersistLayout }
 }
 
 /**

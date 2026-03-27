@@ -1,6 +1,7 @@
 import { FlowAction, FlowActionType, LoopOnItemsAction, RouterAction } from '../actions/action'
-import { FlowVersion } from '../flow-version'
+import { CanvasLayout, FlowVersion } from '../flow-version'
 import { FlowTrigger, FlowTriggerType } from '../triggers/trigger'
+import { computeAutoLayout } from './auto-layout'
 import { flowStructureUtil, Step } from './flow-structure-util'
 
 /**
@@ -299,4 +300,90 @@ export function extractPositions(nodes: GraphNode[]): Record<string, { x: number
         positions[node.id] = { x: node.position.x, y: node.position.y }
     }
     return positions
+}
+
+/**
+ * Result of canvas layout migration.
+ *
+ * `positions` contains the final positions for all nodes.
+ * `shouldPersistLayout` is true when the layout was computed (partially or fully)
+ * and should be saved back to the server via UPDATE_CANVAS_LAYOUT.
+ */
+export type MigrationResult = {
+    positions: Record<string, { x: number; y: number }>
+    shouldPersistLayout: boolean
+}
+
+/**
+ * Migrate canvas layout for backward compatibility with existing flows.
+ *
+ * Handles three scenarios:
+ * 1. canvasLayout is null: compute full auto-layout via Dagre for all nodes.
+ *    Returns shouldPersistLayout=true so the caller can save the computed positions.
+ * 2. canvasLayout exists but some nodes are missing from positions (e.g., a new step
+ *    was added after layout was saved): compute Dagre layout for all nodes, then
+ *    merge -- preserving existing positions for nodes that have them, filling in
+ *    Dagre-computed positions for nodes that don't.
+ *    Returns shouldPersistLayout=true.
+ * 3. canvasLayout exists and ALL nodes have positions: return existing positions
+ *    unchanged. Returns shouldPersistLayout=false (no persistence needed).
+ *
+ * @param nodes - graph nodes (from linkedListToGraph, positions may be {0,0})
+ * @param edges - graph edges
+ * @param canvasLayout - the flow version's canvasLayout (null for migrated flows)
+ * @returns MigrationResult with final positions and persistence flag
+ */
+export function migrateCanvasLayout(
+    nodes: GraphNode[],
+    edges: GraphEdge[],
+    canvasLayout: CanvasLayout | null | undefined,
+): MigrationResult {
+    // Case 1: No canvas layout at all -- full auto-layout
+    if (!canvasLayout) {
+        const layout = computeAutoLayout(nodes, edges)
+        return {
+            positions: layout.positions,
+            shouldPersistLayout: true,
+        }
+    }
+
+    const existingPositions = canvasLayout.positions ?? {}
+
+    // Check if all nodes have positions in the existing layout
+    const missingNodeIds = nodes.filter(
+        (node) => !existingPositions[node.id],
+    ).map((node) => node.id)
+
+    // Case 3: All nodes have positions -- no migration needed
+    if (missingNodeIds.length === 0) {
+        return {
+            positions: existingPositions,
+            shouldPersistLayout: false,
+        }
+    }
+
+    // Case 2: Partial layout -- compute Dagre for all, then merge
+    // Dagre is run on all nodes/edges to produce a coherent layout.
+    // We then use the Dagre positions ONLY for nodes missing from the
+    // existing layout, preserving user-saved positions for the rest.
+    const layout = computeAutoLayout(nodes, edges)
+    const mergedPositions: Record<string, { x: number; y: number }> = {}
+
+    for (const node of nodes) {
+        const existing = existingPositions[node.id]
+        if (existing) {
+            mergedPositions[node.id] = { x: existing.x, y: existing.y }
+        }
+        else {
+            const computed = layout.positions[node.id]
+            if (computed) {
+                mergedPositions[node.id] = { x: computed.x, y: computed.y }
+            }
+        }
+    }
+
+    return {
+        positions: mergedPositions,
+        shouldPersistLayout: true,
+    }
 }

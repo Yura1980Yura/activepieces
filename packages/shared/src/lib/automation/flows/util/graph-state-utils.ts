@@ -10,6 +10,7 @@ import {
     linkedListToGraph,
     graphToLinkedList,
     extractPositions,
+    migrateCanvasLayout,
 } from './graph-converter'
 import { classifyEdges, GraphEdgeType } from './graph-edge-utils'
 import { flowStructureUtil, Step } from './flow-structure-util'
@@ -21,10 +22,14 @@ export type ClassifiedGraphEdge = GraphEdge & { type: GraphEdgeType }
 
 /**
  * Result of graph state initialization or sync.
+ *
+ * `shouldPersistLayout` is true when the layout was computed or partially filled
+ * (P1-F03 migration) and should be saved back via UPDATE_CANVAS_LAYOUT.
  */
 export type GraphStateData = {
     nodes: GraphNode[]
     edges: ClassifiedGraphEdge[]
+    shouldPersistLayout: boolean
 }
 
 /**
@@ -41,26 +46,25 @@ export type GraphToFlowResult = {
  * Pipeline:
  * 1. linkedListToGraph() - traverse linked-list to nodes+edges
  * 2. classifyEdges() - annotate edges with type (default/loop/branch)
- * 3. computeAutoLayout() - apply Dagre when canvasLayout is null
+ * 3. migrateCanvasLayout() - compute Dagre for null/partial canvasLayout (P1-F03)
  *
- * When canvasLayout exists, stored positions are used directly.
- * When null, Dagre computes initial positions.
+ * When canvasLayout exists with all node positions, stored positions are used directly.
+ * When null or partial, Dagre auto-layout fills missing positions and signals
+ * shouldPersistLayout=true.
  */
 export function createInitialGraphData(flowVersion: FlowVersion): GraphStateData {
     const { nodes, edges } = linkedListToGraph(flowVersion)
     const typedEdges = classifyEdges(edges)
 
-    if (!flowVersion.canvasLayout) {
-        const layout = computeAutoLayout(nodes, edges)
-        for (const node of nodes) {
-            const pos = layout.positions[node.id]
-            if (pos) {
-                node.position = { x: pos.x, y: pos.y }
-            }
+    const migration = migrateCanvasLayout(nodes, edges, flowVersion.canvasLayout ?? null)
+    for (const node of nodes) {
+        const pos = migration.positions[node.id]
+        if (pos) {
+            node.position = { x: pos.x, y: pos.y }
         }
     }
 
-    return { nodes, edges: typedEdges }
+    return { nodes, edges: typedEdges, shouldPersistLayout: migration.shouldPersistLayout }
 }
 
 /**
