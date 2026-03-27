@@ -8,6 +8,7 @@ import { BaseExecutor } from './base-executor'
 import { codeExecutor } from './code-executor'
 import { EngineConstants } from './context/engine-constants'
 import { FlowExecutorContext } from './context/flow-execution-context'
+import { graphFlowExecutor } from './graph-flow-executor'
 import { loopExecutor } from './loop-executor'
 import { pieceExecutor } from './piece-executor'
 import { routerExecuter } from './router-executor'
@@ -37,6 +38,12 @@ export const flowExecutor = {
         constants: EngineConstants
         input: ExecuteFlowOperation
     }): Promise<FlowExecutorContext> {
+        // Роутинг: если flowVersion содержит graphData — делегировать graph executor
+        if (!isNil(input.flowVersion.graphData)) {
+            return graphFlowExecutor.executeFromTrigger({ executionState, constants, input })
+        }
+
+        // Legacy путь: linked-list обход через nextAction
         const trigger = input.flowVersion.trigger
         if (input.executionType === ExecutionType.BEGIN) {
             await triggerHelper.executeOnStart(trigger, constants, input.triggerPayload)

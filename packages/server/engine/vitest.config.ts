@@ -15,7 +15,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     testTimeout: 20000,
-    include: [path.resolve(__dirname, 'test/**/*.test.ts')],
+    include: [path.resolve(__dirname, 'test/**/*.test.ts').replace(/\\/g, '/')],
   },
   resolve: {
     alias: {
