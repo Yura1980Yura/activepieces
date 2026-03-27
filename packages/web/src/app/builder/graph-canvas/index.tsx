@@ -1,12 +1,16 @@
 import {
   buildGraphFromFlowVersion,
   createIsValidConnection,
+  parsePaletteDragData,
+  PALETTE_DRAG_TYPE,
   type FlowVersion,
+  type PaletteDragData,
 } from '@activepieces/shared';
 import {
   ReactFlow,
   Background,
   BackgroundVariant,
+  useReactFlow,
   type OnNodesChange,
   type OnEdgesChange,
   type OnConnect,
@@ -37,6 +41,11 @@ export type GraphCanvasProps = {
   onNodeClick?: NodeMouseHandler;
   /** Callback for auto-layout button, wired to autoLayoutGraph() in graph state */
   onAutoLayout?: () => void;
+  /** Callback when a piece is dropped from the palette sidebar onto the canvas (P1-E01) */
+  onPieceDrop?: (
+    dragData: PaletteDragData,
+    position: { x: number; y: number },
+  ) => void;
 };
 
 /**
@@ -51,8 +60,10 @@ const GraphCanvasInner = React.memo(
     onConnect,
     onNodeClick,
     onAutoLayout,
+    onPieceDrop,
   }: GraphCanvasProps) => {
     const { nodeTypes, edgeTypes } = useGraphCanvasContext();
+    const reactFlowInstance = useReactFlow();
 
     /**
      * Convert FlowVersion to ReactFlow-ready graph data.
@@ -94,6 +105,40 @@ const GraphCanvasInner = React.memo(
       [graphData.nodes, graphData.edges],
     );
 
+    /**
+     * Handle drag over events from the piece palette sidebar.
+     * Sets the drop effect to 'move' to indicate the canvas accepts drops.
+     */
+    const handleDragOver = useCallback((event: React.DragEvent) => {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+    }, []);
+
+    /**
+     * Handle drop events from the piece palette sidebar.
+     *
+     * Pipeline:
+     * 1. Extract palette drag data from HTML5 DataTransfer
+     * 2. Parse and validate the data using parsePaletteDragData
+     * 3. Convert screen coordinates to flow position via screenToFlowPosition
+     * 4. Call onPieceDrop callback with parsed data and flow position
+     */
+    const handleDrop = useCallback(
+      (event: React.DragEvent) => {
+        event.preventDefault();
+        const data = event.dataTransfer.getData(PALETTE_DRAG_TYPE);
+        if (!data) return;
+        const dragData = parsePaletteDragData(data);
+        if (!dragData) return;
+        const position = reactFlowInstance.screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        });
+        onPieceDrop?.(dragData, position);
+      },
+      [reactFlowInstance, onPieceDrop],
+    );
+
     return (
       <div className="size-full relative overflow-hidden bg-builder-background">
         <ReactFlow
@@ -106,6 +151,8 @@ const GraphCanvasInner = React.memo(
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onNodeClick={onNodeClick}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
           isValidConnection={isValidConnection}
           nodesDraggable={true}
           nodesConnectable={true}
@@ -145,6 +192,7 @@ GraphCanvasInner.displayName = 'GraphCanvasInner';
  * - Classified edges (default/loop/branch) with distinct visual styles
  * - Background with dots pattern
  * - Canvas controls: zoom in/out, fit-to-view, auto-layout button (P1-D06)
+ * - Piece palette drop target: accepts HTML5 drag from sidebar (P1-E01)
  *
  * Wraps GraphCanvasInner with GraphCanvasProvider to supply
  * nodeTypes, edgeTypes, and ReactFlowProvider.
