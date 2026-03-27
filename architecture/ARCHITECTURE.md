@@ -99,6 +99,7 @@ packages/shared/src/lib/automation/flows/util/
 ├── graph-state-utils.ts              # NEW (P1-D05) — createInitialGraphData(), syncGraphFromFlowVersion(), syncGraphToFlowVersion(), autoLayoutGraphNodes(), removeGraphNodes(), removeGraphEdges(), addGraphNode(), applyGraphConnect()
 ├── piece-palette-utils.ts            # NEW (P1-E01) — PALETTE_DRAG_TYPE, createPaletteDragData(), parsePaletteDragData(), createAddActionFromDrop(), filterPaletteItems(), getPaletteItemTestId()
 ├── context-menu-utils.ts             # NEW (P1-E02) — NODE/EDGE/CANVAS_CONTEXT_MENU_ACTIONS, getNodeContextMenuActions(), getEdgeContextMenuActions(), getCanvasContextMenuActions(), getContextMenuTestId()
+├── graph-note-node-utils.ts          # NEW (P1-E03) — NOTE_NODE_TYPE, GraphNoteNodeData, NOTE_COLORS, notesToGraphNodes(), graphNodesToNotes(), getNoteNodeTestId()
 ├── flow-structure-util.ts              # existing — linked-list traversal
 ├── flow-canvas-util.ts                 # existing — legacy position computation
 ├── flow-piece-util.ts                  # existing — piece version utils
@@ -293,6 +294,32 @@ graph-canvas/context-menu/canvas-context-menu.tsx (P1-E02)
   → @/components/ui/context-menu (ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger)
   → i18next (t)
   → lucide-react (ClipboardPaste, MousePointerSquareDashed)
+
+shared/util/graph-note-node-utils.ts (P1-E03)
+  → shared/note (Note, NoteColorVariant)
+  → shared/util/graph-converter (GraphNode)
+
+graph-canvas/nodes/graph-note-node.tsx (P1-E03)
+  → @activepieces/shared (NOTE_COLORS, getNoteNodeTestId, GraphNoteNodeData)
+  → @xyflow/react (NodeProps)
+
+shared/util/graph-canvas-utils.ts (P1-D04, P1-D06, P1-E03)
+  → shared/flow-version (FlowVersion)
+  → shared/util/auto-layout (computeAutoLayout)
+  → shared/util/connection-validator (validateConnection)
+  → shared/util/graph-edge-utils (classifyEdges, GRAPH_EDGE_TYPES)
+  → shared/util/graph-converter (linkedListToGraph, GraphNode, GraphEdge)
+  → shared/util/graph-note-node-utils (notesToGraphNodes, NOTE_NODE_TYPE)
+
+graph-canvas/graph-canvas-provider.tsx (P1-D04, P1-E03)
+  → @activepieces/shared (GRAPH_EDGE_TYPES, NOTE_NODE_TYPE)
+  → @xyflow/react (ReactFlowProvider)
+  → graph-canvas/nodes/graph-step-node.tsx (GraphStepNode)
+  → graph-canvas/nodes/graph-trigger-node.tsx (GraphTriggerNode)
+  → graph-canvas/nodes/graph-note-node.tsx (GraphNoteNode)
+  → graph-canvas/edges/graph-edge.tsx (GraphEdge)
+  → graph-canvas/edges/graph-loop-edge.tsx (GraphLoopEdge)
+  → graph-canvas/edges/graph-branch-edge.tsx (GraphBranchEdge)
 ```
 
 ---
