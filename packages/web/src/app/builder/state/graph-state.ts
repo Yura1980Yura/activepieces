@@ -100,6 +100,21 @@ export const createGraphState = (
 ): GraphState => {
   const initialData = createInitialGraphData(initialState.flowVersion);
 
+  // Auto-persist computed layout when shouldPersistLayout is true (P1-F03 migration)
+  if (initialData.shouldPersistLayout) {
+    setTimeout(() => {
+      const state = get();
+      const positions: Record<string, { x: number; y: number }> = {};
+      for (const node of initialData.nodes) {
+        positions[node.id] = { x: node.position.x, y: node.position.y };
+      }
+      state.applyOperation({
+        type: FlowOperationType.UPDATE_CANVAS_LAYOUT,
+        request: { canvasLayout: { positions } },
+      });
+    }, 0);
+  }
+
   // Register operation listener for structural changes.
   // When the flow's linked-list structure changes, rebuild the graph.
   // This is deferred to next tick to avoid circular set() during initialization.

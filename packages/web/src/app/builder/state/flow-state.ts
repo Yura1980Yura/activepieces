@@ -174,7 +174,7 @@ export const createFlowState = (
           operation,
         );
         state.operationListeners.forEach((listener) => {
-          listener(state.flowVersion, operation);
+          listener(newFlowVersion, operation);
         });
         set({ saving: true });
         const updateRequest = async () => {

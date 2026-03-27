@@ -57,6 +57,8 @@ const BuilderPage = () => {
     removeAllStepTestsListeners,
     selectedStep,
     selectStepByName,
+    graphNodes,
+    graphEdges,
     onGraphNodesChange,
     onGraphEdgesChange,
     onGraphConnect,
@@ -71,6 +73,8 @@ const BuilderPage = () => {
       state.flowVersion.trigger,
     ),
     state.selectStepByName,
+    state.graphNodes,
+    state.graphEdges,
     state.onGraphNodesChange,
     state.onGraphEdgesChange,
     state.onGraphConnect,
@@ -128,7 +132,8 @@ const BuilderPage = () => {
           <div ref={middlePanelRef} className="relative h-full w-full">
             {useGraphCanvas ? (
               <GraphCanvas
-                flowVersion={flowVersion}
+                nodes={graphNodes}
+                edges={graphEdges}
                 onNodesChange={onGraphNodesChange}
                 onEdgesChange={onGraphEdgesChange}
                 onConnect={onGraphConnect}

@@ -1,9 +1,7 @@
 import {
-  buildGraphFromFlowVersion,
   createIsValidConnection,
   parsePaletteDragData,
   PALETTE_DRAG_TYPE,
-  type FlowVersion,
   type PaletteDragData,
 } from '@activepieces/shared';
 import {
@@ -19,7 +17,7 @@ import {
   type NodeMouseHandler,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback } from 'react';
 
 import { GraphCanvasControls } from './canvas-controls';
 import {
@@ -35,7 +33,8 @@ import {
  * Integration with builder state is deferred to P1-D05/P1-F01.
  */
 export type GraphCanvasProps = {
-  flowVersion: FlowVersion;
+  nodes: Node[];
+  edges: Edge[];
   onNodesChange?: OnNodesChange;
   onEdgesChange?: OnEdgesChange;
   onConnect?: OnConnect;
@@ -61,7 +60,8 @@ export type GraphCanvasProps = {
  */
 const GraphCanvasInner = React.memo(
   ({
-    flowVersion,
+    nodes,
+    edges,
     onNodesChange,
     onEdgesChange,
     onConnect,
@@ -74,20 +74,6 @@ const GraphCanvasInner = React.memo(
   }: GraphCanvasProps) => {
     const { nodeTypes, edgeTypes } = useGraphCanvasContext();
     const reactFlowInstance = useReactFlow();
-
-    /**
-     * Convert FlowVersion to ReactFlow-ready graph data.
-     * Memoized on flowVersion reference identity.
-     *
-     * Pipeline:
-     * 1. linkedListToGraph() - traverse linked-list to nodes+edges
-     * 2. classifyEdges() - annotate edges with type (default/loop/branch)
-     * 3. computeAutoLayout() - apply Dagre when canvasLayout is null
-     */
-    const graphData = useMemo(
-      () => buildGraphFromFlowVersion(flowVersion),
-      [flowVersion],
-    );
 
     /**
      * Connection validation callback.
@@ -107,12 +93,9 @@ const GraphCanvasInner = React.memo(
         sourceHandle: string | null;
         targetHandle: string | null;
       }) => {
-        return createIsValidConnection(
-          graphData.nodes,
-          graphData.edges,
-        )(connection);
+        return createIsValidConnection(nodes, edges)(connection);
       },
-      [graphData.nodes, graphData.edges],
+      [nodes, edges],
     );
 
     /**
@@ -155,8 +138,8 @@ const GraphCanvasInner = React.memo(
           className="bg-builder-background"
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
-          nodes={graphData.nodes}
-          edges={graphData.edges}
+          nodes={nodes}
+          edges={edges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}

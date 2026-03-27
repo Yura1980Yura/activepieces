@@ -57,7 +57,7 @@ type CanvasLayout = {
 ```
 packages/web/src/app/builder/
 ├── graph-canvas/                        # NEW — graph-based canvas (replaces flow-canvas)
-│   ├── index.tsx                        # Main GraphCanvas component with ReactFlow
+│   ├── index.tsx                        # Main GraphCanvas component — receives nodes/edges as props (FIX-1)
 │   ├── graph-canvas-provider.tsx        # Context: nodeTypes, edgeTypes, connection rules
 │   ├── canvas-controls.tsx              # Zoom, fit, auto-layout buttons
 │   ├── connection-validator.ts          # Connection rules (what can connect to what)
@@ -150,8 +150,8 @@ graph-canvas/index.tsx
   → edges/graph-branch-edge.tsx
   → sidebar/piece-palette.tsx
   → context-menu/*
-  → utils/auto-layout.ts
-  → utils/connection-rules.ts
+  → shared/util/auto-layout.ts
+  → shared/util/connection-rules.ts
   → utils/types.ts
   → state/graph-state.ts
 
@@ -166,7 +166,7 @@ shared/util/auto-layout.ts
   → shared/flow-version (CanvasLayout)
 
 state/graph-state.ts
-  → utils/graph-converter.ts
+  → shared/util/graph-converter.ts
   → state/flow-state.ts (existing)
   → @activepieces/shared (FlowOperationType)
 
@@ -229,11 +229,13 @@ graph-canvas/graph-canvas-provider.tsx (P1-D04)
   → graph-canvas/edges/graph-loop-edge.tsx (GraphLoopEdge)
   → graph-canvas/edges/graph-branch-edge.tsx (GraphBranchEdge)
 
-graph-canvas/index.tsx (P1-D04, P1-D06)
-  → @xyflow/react (ReactFlow, Background, BackgroundVariant, OnNodesChange, OnEdgesChange, OnConnect)
-  → @activepieces/shared (buildGraphFromFlowVersion, createIsValidConnection, FlowVersion)
+graph-canvas/index.tsx (P1-D04, P1-D06, FIX-1)
+  → @xyflow/react (ReactFlow, Background, BackgroundVariant, OnNodesChange, OnEdgesChange, OnConnect, Node, Edge)
+  → @activepieces/shared (createIsValidConnection)
   → graph-canvas/canvas-controls.tsx (GraphCanvasControls)
   → graph-canvas/graph-canvas-provider.tsx (GraphCanvasProvider, useGraphCanvasContext)
+  NOTE: GraphCanvas receives nodes/edges as props (not flowVersion). The parent
+  (builder/index.tsx) calls buildGraphFromFlowVersion() and passes the result down.
 
 graph-canvas/canvas-controls.tsx (P1-D06)
   → @activepieces/shared (CANVAS_CONTROL_ACTIONS)
@@ -276,11 +278,12 @@ graph-canvas/sidebar/piece-palette.tsx (P1-E01)
   → @/components/ui/scroll-area (ScrollArea)
   → graph-canvas/sidebar/piece-palette-item.tsx (PiecePaletteItem)
 
-graph-canvas/index.tsx (P1-D04, P1-D06, P1-E01, P1-E02)
-  → @activepieces/shared (buildGraphFromFlowVersion, createIsValidConnection, parsePaletteDragData, PALETTE_DRAG_TYPE, FlowVersion, PaletteDragData)
+graph-canvas/index.tsx (P1-D04, P1-D06, P1-E01, P1-E02, FIX-1)
+  → @activepieces/shared (createIsValidConnection, parsePaletteDragData, PALETTE_DRAG_TYPE, PaletteDragData)
   → @xyflow/react (ReactFlow, Background, BackgroundVariant, useReactFlow, OnNodesChange, OnEdgesChange, OnConnect, Node, Edge)
   → graph-canvas/canvas-controls.tsx (GraphCanvasControls)
   → graph-canvas/graph-canvas-provider.tsx (GraphCanvasProvider, useGraphCanvasContext)
+  NOTE: Receives nodes/edges as props; uses HTML5 DnD onDrop/onDragOver for palette drops.
 
 shared/util/context-menu-utils.ts (P1-E02)
   → (no imports — pure-logic constants and functions)
@@ -488,14 +491,18 @@ Handle semantics:
   - Handle count = settings.branches.length (dynamic)
 ```
 
-### 6.4 Auto-Layout (Dagre)
+### 6.4 Drag-and-Drop: HTML5 DnD over @dnd-kit
+
+HTML5 native Drag and Drop API is used for palette drag-and-drop instead of @dnd-kit/core. This decision was made because @dnd-kit's coordinate system conflicts with ReactFlow's viewport transformations (pan/zoom), causing incorrect drop positions. HTML5 DnD integrates cleanly with ReactFlow's `screenToFlowPosition()` for accurate coordinate mapping.
+
+### 6.5 Auto-Layout (Dagre)
 
 - Direction: TB (top-to-bottom), same as current vertical flow
 - Node separation: 80px vertical, 140px horizontal
 - Used for: initial layout of flows without canvasLayout, "Auto-layout" button
 - Library: @dagrejs/dagre (already in ecosystem, used by python_converter)
 
-### 6.5 State Management
+### 6.6 State Management
 
 New Zustand slice `GraphState`:
 ```typescript
@@ -521,7 +528,7 @@ type GraphState = {
 };
 ```
 
-### 6.6 Operation-to-Graph Mapping
+### 6.7 Operation-to-Graph Mapping
 
 Every `FlowOperationType` dispatched through `flowOperations.apply` must produce corresponding graph mutations. The graph state subscribes to flow operations via `operationListeners` (existing pattern in flow-state.ts).
 
@@ -594,7 +601,7 @@ This ensures linked-list is always the authoritative source.
 |-----------|-----------|---------|
 | Graph rendering | @xyflow/react | 12.3.5 (existing) |
 | Auto-layout | @dagrejs/dagre | NEW dependency |
-| Drag-and-drop (palette) | @dnd-kit/core | 6.1.0 (existing) |
+| Drag-and-drop (palette) | HTML5 native DnD API | built-in (see §6.4) |
 | State management | zustand | 4.5.4 (existing) |
 | UI components | Radix UI + Tailwind | existing |
 | Testing | vitest | existing |
