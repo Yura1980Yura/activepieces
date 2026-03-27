@@ -97,6 +97,7 @@ packages/shared/src/lib/automation/flows/util/
 ├── graph-edge-utils.ts                # NEW (P1-D03) — getEdgeType(), getEdgeLabel(), getEdgeStyle(), classifyEdges(), GRAPH_EDGE_TYPES
 ├── graph-canvas-utils.ts              # NEW (P1-D04, P1-D06) — createNodeTypesConfig(), createEdgeTypesConfig(), buildGraphFromFlowVersion(), createIsValidConnection(), CANVAS_CONTROL_ACTIONS, getCanvasControlActions()
 ├── graph-state-utils.ts              # NEW (P1-D05) — createInitialGraphData(), syncGraphFromFlowVersion(), syncGraphToFlowVersion(), autoLayoutGraphNodes(), removeGraphNodes(), removeGraphEdges(), addGraphNode(), applyGraphConnect()
+├── piece-palette-utils.ts            # NEW (P1-E01) — PALETTE_DRAG_TYPE, createPaletteDragData(), parsePaletteDragData(), createAddActionFromDrop(), filterPaletteItems(), getPaletteItemTestId()
 ├── flow-structure-util.ts              # existing — linked-list traversal
 ├── flow-canvas-util.ts                 # existing — legacy position computation
 ├── flow-piece-util.ts                  # existing — piece version utils
@@ -248,6 +249,28 @@ state/graph-state.ts (P1-D05)
   → @activepieces/shared (FlowVersion, FlowOperationRequest, FlowOperationType, createInitialGraphData, syncGraphFromFlowVersion, syncGraphToFlowVersion, autoLayoutGraphNodes, removeGraphNodes, removeGraphEdges, applyGraphConnect, GraphNode, ClassifiedGraphEdge)
   → @xyflow/react (OnNodesChange, OnEdgesChange, OnConnect, Connection, applyNodeChanges, applyEdgeChanges, NodeChange, EdgeChange)
   → builder-hooks (BuilderState)
+
+shared/util/piece-palette-utils.ts (P1-E01)
+  → shared/actions/action (FlowActionType)
+  → shared/operations (StepLocationRelativeToParent)
+
+graph-canvas/sidebar/piece-palette-item.tsx (P1-E01)
+  → @activepieces/shared (createPaletteDragData, getPaletteItemTestId, PALETTE_DRAG_TYPE)
+  → @/features/pieces (PieceIcon)
+
+graph-canvas/sidebar/piece-palette.tsx (P1-E01)
+  → @activepieces/shared (filterPaletteItems, PaletteDragData)
+  → i18next (t)
+  → lucide-react (SearchIcon)
+  → @/components/ui/input (Input)
+  → @/components/ui/scroll-area (ScrollArea)
+  → graph-canvas/sidebar/piece-palette-item.tsx (PiecePaletteItem)
+
+graph-canvas/index.tsx (P1-D04, P1-D06, P1-E01)
+  → @activepieces/shared (buildGraphFromFlowVersion, createIsValidConnection, parsePaletteDragData, PALETTE_DRAG_TYPE, FlowVersion, PaletteDragData)
+  → @xyflow/react (ReactFlow, Background, BackgroundVariant, useReactFlow, OnNodesChange, OnEdgesChange, OnConnect)
+  → graph-canvas/canvas-controls.tsx (GraphCanvasControls)
+  → graph-canvas/graph-canvas-provider.tsx (GraphCanvasProvider, useGraphCanvasContext)
 ```
 
 ---
