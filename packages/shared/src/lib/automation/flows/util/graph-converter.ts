@@ -8,12 +8,14 @@ import { flowStructureUtil, Step } from './flow-structure-util'
 /**
  * Data attached to each graph node — carries the original step.
  * executionStatus is optional — set during run visualization (P2-D01).
+ * errorMessage is optional — set for nodes with FAILED status (P2-D03).
  */
 export type GraphNodeData = {
     step: Step
     stepName: string
     actionType: string
     executionStatus?: string
+    errorMessage?: string
 }
 
 /**
