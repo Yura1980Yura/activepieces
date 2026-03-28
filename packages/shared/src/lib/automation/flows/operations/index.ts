@@ -18,6 +18,7 @@ import { _duplicateBranch, _duplicateStep } from './duplicate-step'
 import { _importFlow } from './import-flow'
 import { _moveAction } from './move-action'
 import { _moveBranch } from './move-branch'
+import { graphOperations, GraphAddNodeRequest, GraphRemoveNodeRequest, GraphAddEdgeRequest, GraphRemoveEdgeRequest, GraphMoveNodeRequest } from './graph-operations'
 import { notesOperations } from './notes-operations'
 import { _getOperationsForPaste } from './paste-operations'
 import { _skipAction } from './skip-action'
@@ -53,6 +54,11 @@ export enum FlowOperationType {
     ADD_NOTE = 'ADD_NOTE',
     UPDATE_SAMPLE_DATA_INFO = 'UPDATE_SAMPLE_DATA_INFO',
     UPDATE_CANVAS_LAYOUT = 'UPDATE_CANVAS_LAYOUT',
+    GRAPH_ADD_NODE = 'GRAPH_ADD_NODE',
+    GRAPH_REMOVE_NODE = 'GRAPH_REMOVE_NODE',
+    GRAPH_ADD_EDGE = 'GRAPH_ADD_EDGE',
+    GRAPH_REMOVE_EDGE = 'GRAPH_REMOVE_EDGE',
+    GRAPH_MOVE_NODE = 'GRAPH_MOVE_NODE',
 }
 
 export const DeleteBranchRequest = z.object({
@@ -326,6 +332,26 @@ export const FlowOperationRequest = z.union([
         type: z.literal(FlowOperationType.UPDATE_CANVAS_LAYOUT),
         request: UpdateCanvasLayoutRequest,
     }).describe('Update Canvas Layout'),
+    z.object({
+        type: z.literal(FlowOperationType.GRAPH_ADD_NODE),
+        request: GraphAddNodeRequest,
+    }).describe('Graph Add Node'),
+    z.object({
+        type: z.literal(FlowOperationType.GRAPH_REMOVE_NODE),
+        request: GraphRemoveNodeRequest,
+    }).describe('Graph Remove Node'),
+    z.object({
+        type: z.literal(FlowOperationType.GRAPH_ADD_EDGE),
+        request: GraphAddEdgeRequest,
+    }).describe('Graph Add Edge'),
+    z.object({
+        type: z.literal(FlowOperationType.GRAPH_REMOVE_EDGE),
+        request: GraphRemoveEdgeRequest,
+    }).describe('Graph Remove Edge'),
+    z.object({
+        type: z.literal(FlowOperationType.GRAPH_MOVE_NODE),
+        request: GraphMoveNodeRequest,
+    }).describe('Graph Move Node'),
 ])
 
 
@@ -430,6 +456,26 @@ export const flowOperations = {
             }
             case FlowOperationType.UPDATE_CANVAS_LAYOUT: {
                 clonedVersion.canvasLayout = operation.request.canvasLayout
+                break
+            }
+            case FlowOperationType.GRAPH_ADD_NODE: {
+                clonedVersion = graphOperations.addNode(clonedVersion, operation.request)
+                break
+            }
+            case FlowOperationType.GRAPH_REMOVE_NODE: {
+                clonedVersion = graphOperations.removeNode(clonedVersion, operation.request)
+                break
+            }
+            case FlowOperationType.GRAPH_ADD_EDGE: {
+                clonedVersion = graphOperations.addEdge(clonedVersion, operation.request)
+                break
+            }
+            case FlowOperationType.GRAPH_REMOVE_EDGE: {
+                clonedVersion = graphOperations.removeEdge(clonedVersion, operation.request)
+                break
+            }
+            case FlowOperationType.GRAPH_MOVE_NODE: {
+                clonedVersion = graphOperations.moveNode(clonedVersion, operation.request)
                 break
             }
 
