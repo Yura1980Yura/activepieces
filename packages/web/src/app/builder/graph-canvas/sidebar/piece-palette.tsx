@@ -8,14 +8,13 @@ import { Loader2Icon, SearchIcon } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
 
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { piecesHooks } from '@/features/pieces';
 
 import { PiecePaletteItem } from './piece-palette-item';
 
 export type PiecePaletteProps = {
-  /** List of available pieces to display in the palette */
   items: PaletteDragData[];
+  onPieceClick?: (dragData: PaletteDragData, position: { x: number; y: number }) => void;
 };
 
 /**
@@ -32,7 +31,7 @@ export type PiecePaletteProps = {
  * - Scrollable list of draggable PiecePaletteItem components
  * - Uses shared filterPaletteItems utility for filtering logic
  */
-export const PiecePalette = React.memo(({ items }: PiecePaletteProps) => {
+export const PiecePalette = React.memo(({ items, onPieceClick }: PiecePaletteProps) => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredItems = useMemo(
@@ -42,7 +41,7 @@ export const PiecePalette = React.memo(({ items }: PiecePaletteProps) => {
 
   return (
     <div
-      className="flex flex-col h-full w-[220px] min-w-[220px] border-r border-solid border-border bg-background"
+      className="flex flex-col h-full min-h-0 w-[220px] min-w-[220px] border-r border-solid border-border bg-background relative z-10"
       data-testid="piece-palette-sidebar"
     >
       <div className="p-3 border-b border-solid border-border">
@@ -58,7 +57,7 @@ export const PiecePalette = React.memo(({ items }: PiecePaletteProps) => {
           />
         </div>
       </div>
-      <ScrollArea className="flex-1 p-2">
+      <div className="flex-1 overflow-y-auto p-2 min-h-0">
         <div className="flex flex-col gap-1">
           {filteredItems.map((item) => (
             <PiecePaletteItem
@@ -67,6 +66,7 @@ export const PiecePalette = React.memo(({ items }: PiecePaletteProps) => {
               logoUrl={item.logoUrl}
               pieceType={item.pieceType}
               pieceName={item.pieceName}
+              onPieceClick={onPieceClick}
             />
           ))}
           {filteredItems.length === 0 && (
@@ -75,7 +75,7 @@ export const PiecePalette = React.memo(({ items }: PiecePaletteProps) => {
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 });
@@ -95,7 +95,9 @@ PiecePalette.displayName = 'PiecePalette';
  * - FlowActionType.PIECE -> pieceType (для всех pieces)
  * - Встроенные типы (Code, Loop, Router) добавляются статически
  */
-export const ConnectedPiecePalette = React.memo(() => {
+export const ConnectedPiecePalette = React.memo(({ onPieceClick }: {
+  onPieceClick?: (dragData: PaletteDragData, position: { x: number; y: number }) => void;
+}) => {
   const { pieces, isLoading } = piecesHooks.usePieces({});
 
   const paletteItems = useMemo(
@@ -117,7 +119,7 @@ export const ConnectedPiecePalette = React.memo(() => {
     );
   }
 
-  return <PiecePalette items={paletteItems} />;
+  return <PiecePalette items={paletteItems} onPieceClick={onPieceClick} />;
 });
 
 ConnectedPiecePalette.displayName = 'ConnectedPiecePalette';

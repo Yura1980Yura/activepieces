@@ -1,5 +1,6 @@
 import { FlowActionType } from '../actions/action'
 import { CanvasLayout, FlowVersion } from '../flow-version'
+import { GraphNodeDefinition } from '../graph-data'
 import { FlowTrigger } from '../triggers/trigger'
 import { computeAutoLayout } from './auto-layout'
 import { validateConnection } from './connection-validator'
@@ -41,12 +42,41 @@ export type GraphToFlowResult = {
 }
 
 /**
+ * Конвертировать GraphNodeDefinition (из graphData) в GraphNode (ReactFlow формат).
+ *
+ * GraphNodeDefinition хранит settings/displayName/actionType напрямую,
+ * а GraphNode хранит их в data.step. Создаём минимальный Step-объект
+ * из полей GraphNodeDefinition для совместимости с ReactFlow node rendering.
+ */
+function graphNodeDefToReactFlowNode(def: GraphNodeDefinition): GraphNode {
+    return {
+        id: def.id,
+        type: def.type,
+        position: { x: def.position.x, y: def.position.y },
+        data: {
+            step: {
+                name: def.id,
+                type: def.actionType,
+                displayName: def.displayName,
+                valid: def.valid,
+                settings: def.settings,
+                skip: def.skip,
+            } as Step,
+            stepName: def.id,
+            actionType: def.actionType,
+        },
+    }
+}
+
+/**
  * Create initial graph data from a FlowVersion.
  *
  * Pipeline:
  * 1. linkedListToGraph() - traverse linked-list to nodes+edges
- * 2. classifyEdges() - annotate edges with type (default/loop/branch)
- * 3. migrateCanvasLayout() - compute Dagre for null/partial canvasLayout (P1-F03)
+ * 2. Merge orphan nodes from graphData.nodes (added via GRAPH_ADD_NODE but not yet connected)
+ * 3. Merge edges from graphData.edges for orphan nodes
+ * 4. classifyEdges() - annotate edges with type (default/loop/branch)
+ * 5. migrateCanvasLayout() - compute Dagre for null/partial canvasLayout (P1-F03)
  *
  * When canvasLayout exists with all node positions, stored positions are used directly.
  * When null or partial, Dagre auto-layout fills missing positions and signals
@@ -54,9 +84,49 @@ export type GraphToFlowResult = {
  */
 export function createInitialGraphData(flowVersion: FlowVersion): GraphStateData {
     const { nodes, edges } = linkedListToGraph(flowVersion)
+
+    // Merge orphan nodes from graphData that are not in trigger linked-list
+    if (flowVersion.graphData) {
+        const linkedListNodeIds = new Set(nodes.map(n => n.id))
+        for (const gNode of flowVersion.graphData.nodes) {
+            if (!linkedListNodeIds.has(gNode.id)) {
+                nodes.push(graphNodeDefToReactFlowNode(gNode))
+            }
+        }
+
+        // Merge edges from graphData that reference orphan nodes
+        const allNodeIds = new Set(nodes.map(n => n.id))
+        const existingEdgeIds = new Set(edges.map(e => e.id))
+        for (const gEdge of flowVersion.graphData.edges) {
+            if (!existingEdgeIds.has(gEdge.id) && allNodeIds.has(gEdge.source) && allNodeIds.has(gEdge.target)) {
+                edges.push({
+                    id: gEdge.id,
+                    source: gEdge.source,
+                    target: gEdge.target,
+                    sourceHandle: gEdge.sourceHandle,
+                    targetHandle: gEdge.targetHandle,
+                })
+            }
+        }
+    }
+
     const typedEdges = classifyEdges(edges)
 
-    const migration = migrateCanvasLayout(nodes, edges, flowVersion.canvasLayout ?? null)
+    // Inject orphan node positions from graphData into canvasLayout
+    // so migrateCanvasLayout treats them as "existing" and doesn't
+    // recompute Dagre layout (which shifts all nodes)
+    let canvasLayout = flowVersion.canvasLayout ?? null
+    if (flowVersion.graphData && canvasLayout) {
+        const positions = { ...canvasLayout.positions }
+        for (const gNode of flowVersion.graphData.nodes) {
+            if (!positions[gNode.id]) {
+                positions[gNode.id] = { x: gNode.position.x, y: gNode.position.y }
+            }
+        }
+        canvasLayout = { ...canvasLayout, positions }
+    }
+
+    const migration = migrateCanvasLayout(nodes, edges, canvasLayout)
     for (const node of nodes) {
         const pos = migration.positions[node.id]
         if (pos) {

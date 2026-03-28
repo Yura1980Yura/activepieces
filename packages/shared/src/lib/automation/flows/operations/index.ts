@@ -530,15 +530,32 @@ function syncTriggerFromGraphData(flowVersion: FlowVersion): FlowVersion {
     if (!flowVersion.graphData) {
         return flowVersion
     }
-    const hasTriggerNode = flowVersion.graphData.nodes.some(n => n.type === 'trigger')
+    const graphData = JSON.parse(JSON.stringify(flowVersion.graphData)) as GraphData
+    const hasTriggerNode = graphData.nodes.some(n => n.type === 'trigger')
     if (!hasTriggerNode) {
-        return flowVersion
+        // Trigger отсутствует в graphData — добавляем из flowVersion.trigger,
+        // чтобы edges trigger→action корректно конвертировались в linked-list.
+        // Это происходит когда первая GRAPH_ADD_NODE создаёт graphData без trigger.
+        const hasEdgeFromTrigger = graphData.edges.some(e => e.source === flowVersion.trigger.name)
+        if (!hasEdgeFromTrigger) {
+            return flowVersion
+        }
+        graphData.nodes.push({
+            id: flowVersion.trigger.name,
+            type: 'trigger',
+            position: { x: 0, y: 0 },
+            displayName: flowVersion.trigger.displayName,
+            valid: flowVersion.trigger.valid,
+            actionType: flowVersion.trigger.type,
+            settings: flowVersion.trigger.settings as Record<string, unknown>,
+        })
     }
     try {
-        const trigger = graphDataToLinkedList(flowVersion.graphData)
+        const trigger = graphDataToLinkedList(graphData)
         return {
             ...flowVersion,
             trigger,
+            graphData,
         }
     }
     catch {

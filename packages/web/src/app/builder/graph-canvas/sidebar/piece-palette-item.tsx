@@ -2,6 +2,7 @@ import {
   createPaletteDragData,
   getPaletteItemTestId,
   PALETTE_DRAG_TYPE,
+  type PaletteDragData,
 } from '@activepieces/shared';
 import React from 'react';
 
@@ -12,6 +13,7 @@ export type PiecePaletteItemProps = {
   logoUrl: string;
   pieceType: string;
   pieceName: string;
+  onPieceClick?: (dragData: PaletteDragData, position: { x: number; y: number }) => void;
 };
 
 /**
@@ -25,7 +27,7 @@ export type PiecePaletteItemProps = {
  * Architecture doc section 3: sidebar/piece-palette-item.tsx
  */
 export const PiecePaletteItem = React.memo(
-  ({ displayName, logoUrl, pieceType, pieceName }: PiecePaletteItemProps) => {
+  ({ displayName, logoUrl, pieceType, pieceName, onPieceClick }: PiecePaletteItemProps) => {
     const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
       const dragData = createPaletteDragData(
         pieceType,
@@ -37,11 +39,19 @@ export const PiecePaletteItem = React.memo(
       e.dataTransfer.effectAllowed = 'move';
     };
 
+    const handleClick = () => {
+      if (!onPieceClick) return;
+      const dragData = createPaletteDragData(pieceType, pieceName, displayName, logoUrl);
+      const parsed = JSON.parse(dragData) as PaletteDragData;
+      onPieceClick(parsed, { x: 400, y: 300 });
+    };
+
     return (
       <div
         draggable={true}
         onDragStart={handleDragStart}
-        className="flex items-center gap-2 rounded-md border border-solid border-border bg-background p-2 cursor-grab active:cursor-grabbing hover:bg-accent transition-colors"
+        onClick={handleClick}
+        className="flex items-center gap-2 rounded-md border border-solid border-border bg-background p-2 cursor-pointer hover:bg-accent transition-colors select-none"
         data-testid={getPaletteItemTestId(pieceName)}
       >
         <PieceIcon

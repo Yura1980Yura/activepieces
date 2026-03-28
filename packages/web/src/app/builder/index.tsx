@@ -209,7 +209,7 @@ const BuilderPage = () => {
           <div ref={middlePanelRef} className="relative h-full w-full">
             {useGraphCanvas ? (
               <div className="flex h-full w-full">
-                <ConnectedPiecePalette />
+                <ConnectedPiecePalette onPieceClick={handlePieceDrop} />
                 <div className="flex-1 h-full min-w-0">
                   <GraphCanvas
                     nodes={graphNodes}
