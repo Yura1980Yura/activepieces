@@ -228,3 +228,67 @@ export function filterPaletteItems(
 export function getPaletteItemTestId(pieceName: string): string {
     return `palette-item-${pieceName}`
 }
+
+/**
+ * Описание входного элемента для маппинга в PaletteDragData.
+ * Совместимо с PieceMetadataModelSummary из pieces-framework.
+ */
+export type PieceSummaryForPalette = {
+    /** Имя пакета piece (e.g., '@activepieces/piece-gmail') */
+    name: string
+    /** Отображаемое имя (e.g., 'Gmail') */
+    displayName: string
+    /** URL иконки */
+    logoUrl: string
+    /** Тип piece (e.g., 'OFFICIAL', 'CUSTOM') — не используется для pieceType в PaletteDragData */
+    pieceType: string
+}
+
+/**
+ * Встроенные (built-in) элементы палитры, которые не являются pieces,
+ * но доступны как действия на canvas (Code, Loop, Branch/Router).
+ */
+export const BUILT_IN_PALETTE_ITEMS: PaletteDragData[] = [
+    {
+        pieceType: FlowActionType.CODE,
+        pieceName: 'code',
+        displayName: 'Code',
+        logoUrl: '/assets/img/custom/piece/code.svg',
+    },
+    {
+        pieceType: FlowActionType.LOOP_ON_ITEMS,
+        pieceName: 'loop',
+        displayName: 'Loop',
+        logoUrl: '/assets/img/custom/piece/loop.svg',
+    },
+    {
+        pieceType: FlowActionType.ROUTER,
+        pieceName: 'router',
+        displayName: 'Branch',
+        logoUrl: '/assets/img/custom/piece/branch.svg',
+    },
+]
+
+/**
+ * Маппинг массива PieceMetadataModelSummary (или любого объекта с полями name, displayName, logoUrl)
+ * в массив PaletteDragData для отображения в палитре.
+ *
+ * Добавляет встроенные типы (Code, Loop, Branch) в начало списка.
+ *
+ * P2-B01: Подключение PiecePalette к реальным данным pieces.
+ *
+ * @param pieces - Массив piece summaries из API
+ * @returns Массив PaletteDragData для PiecePalette компонента
+ */
+export function mapPiecesToPaletteItems(
+    pieces: PieceSummaryForPalette[],
+): PaletteDragData[] {
+    const pieceItems: PaletteDragData[] = pieces.map((piece) => ({
+        pieceType: FlowActionType.PIECE,
+        pieceName: piece.name,
+        displayName: piece.displayName,
+        logoUrl: piece.logoUrl,
+    }))
+
+    return [...BUILT_IN_PALETTE_ITEMS, ...pieceItems]
+}

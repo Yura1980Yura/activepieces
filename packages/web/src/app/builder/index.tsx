@@ -37,6 +37,7 @@ import { RunInfoWidget } from './flow-canvas/widgets/run-info-widget';
 import { ViewingOldVersionWidget } from './flow-canvas/widgets/viewing-old-version-widget';
 import { FlowVersionsList } from './flow-versions';
 import { GraphCanvas } from './graph-canvas';
+import { ConnectedPiecePalette } from './graph-canvas/sidebar/piece-palette';
 import { RunsList } from './run-list';
 import { CursorPositionProvider } from './state/cursor-position-context';
 import { StepSettingsContainer } from './step-settings';
@@ -131,15 +132,20 @@ const BuilderPage = () => {
         <ResizablePanel defaultSize="100%" id="flow-canvas">
           <div ref={middlePanelRef} className="relative h-full w-full">
             {useGraphCanvas ? (
-              <GraphCanvas
-                nodes={graphNodes}
-                edges={graphEdges}
-                onNodesChange={onGraphNodesChange}
-                onEdgesChange={onGraphEdgesChange}
-                onConnect={onGraphConnect}
-                onNodeClick={handleNodeClick}
-                onAutoLayout={autoLayoutGraph}
-              />
+              <div className="flex h-full w-full">
+                <ConnectedPiecePalette />
+                <div className="flex-1 h-full min-w-0">
+                  <GraphCanvas
+                    nodes={graphNodes}
+                    edges={graphEdges}
+                    onNodesChange={onGraphNodesChange}
+                    onEdgesChange={onGraphEdgesChange}
+                    onConnect={onGraphConnect}
+                    onNodeClick={handleNodeClick}
+                    onAutoLayout={autoLayoutGraph}
+                  />
+                </div>
+              </div>
             ) : (
               <CursorPositionProvider>
                 <FlowCanvas

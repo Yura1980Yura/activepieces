@@ -6,7 +6,10 @@ import {
     createAddActionFromDrop,
     filterPaletteItems,
     getPaletteItemTestId,
+    mapPiecesToPaletteItems,
+    BUILT_IN_PALETTE_ITEMS,
     PaletteDragData,
+    PieceSummaryForPalette,
 } from '../../src/lib/automation/flows/util/piece-palette-utils'
 
 describe('piece-palette-utils', () => {
@@ -320,6 +323,150 @@ describe('piece-palette-utils', () => {
                 (operation.request.action.settings as Record<string, unknown>)
                     .pieceName,
             ).toBe('@activepieces/piece-gmail')
+        })
+    })
+
+    describe('BUILT_IN_PALETTE_ITEMS', () => {
+        it('should contain exactly 3 built-in items (Code, Loop, Branch)', () => {
+            expect(BUILT_IN_PALETTE_ITEMS).toHaveLength(3)
+        })
+
+        it('should have Code item with pieceType CODE', () => {
+            const codeItem = BUILT_IN_PALETTE_ITEMS.find(
+                (item) => item.pieceName === 'code',
+            )
+            expect(codeItem).toBeDefined()
+            expect(codeItem!.pieceType).toBe('CODE')
+            expect(codeItem!.displayName).toBe('Code')
+            expect(codeItem!.logoUrl).toContain('code')
+        })
+
+        it('should have Loop item with pieceType LOOP_ON_ITEMS', () => {
+            const loopItem = BUILT_IN_PALETTE_ITEMS.find(
+                (item) => item.pieceName === 'loop',
+            )
+            expect(loopItem).toBeDefined()
+            expect(loopItem!.pieceType).toBe('LOOP_ON_ITEMS')
+            expect(loopItem!.displayName).toBe('Loop')
+        })
+
+        it('should have Branch item with pieceType ROUTER', () => {
+            const branchItem = BUILT_IN_PALETTE_ITEMS.find(
+                (item) => item.pieceName === 'router',
+            )
+            expect(branchItem).toBeDefined()
+            expect(branchItem!.pieceType).toBe('ROUTER')
+            expect(branchItem!.displayName).toBe('Branch')
+        })
+
+        it('should have non-empty logoUrl for all items', () => {
+            for (const item of BUILT_IN_PALETTE_ITEMS) {
+                expect(item.logoUrl.length).toBeGreaterThan(0)
+            }
+        })
+    })
+
+    describe('mapPiecesToPaletteItems', () => {
+        const mockPieces: PieceSummaryForPalette[] = [
+            {
+                name: '@activepieces/piece-gmail',
+                displayName: 'Gmail',
+                logoUrl: 'https://cdn.example.com/gmail.png',
+                pieceType: 'OFFICIAL',
+            },
+            {
+                name: '@activepieces/piece-slack',
+                displayName: 'Slack',
+                logoUrl: 'https://cdn.example.com/slack.png',
+                pieceType: 'OFFICIAL',
+            },
+        ]
+
+        it('should return built-in items + mapped pieces', () => {
+            const result = mapPiecesToPaletteItems(mockPieces)
+            // 3 built-in + 2 pieces = 5
+            expect(result).toHaveLength(5)
+        })
+
+        it('should place built-in items first', () => {
+            const result = mapPiecesToPaletteItems(mockPieces)
+            expect(result[0].pieceName).toBe('code')
+            expect(result[1].pieceName).toBe('loop')
+            expect(result[2].pieceName).toBe('router')
+        })
+
+        it('should map piece name to pieceName field', () => {
+            const result = mapPiecesToPaletteItems(mockPieces)
+            const gmailItem = result.find(
+                (item) => item.pieceName === '@activepieces/piece-gmail',
+            )
+            expect(gmailItem).toBeDefined()
+            expect(gmailItem!.displayName).toBe('Gmail')
+            expect(gmailItem!.logoUrl).toBe('https://cdn.example.com/gmail.png')
+        })
+
+        it('should set pieceType to PIECE for all mapped pieces', () => {
+            const result = mapPiecesToPaletteItems(mockPieces)
+            // Skip first 3 (built-in)
+            const pieceItems = result.slice(3)
+            for (const item of pieceItems) {
+                expect(item.pieceType).toBe('PIECE')
+            }
+        })
+
+        it('should return only built-in items for empty input', () => {
+            const result = mapPiecesToPaletteItems([])
+            expect(result).toHaveLength(3)
+            expect(result[0].pieceName).toBe('code')
+            expect(result[1].pieceName).toBe('loop')
+            expect(result[2].pieceName).toBe('router')
+        })
+
+        it('should handle single piece input', () => {
+            const single: PieceSummaryForPalette[] = [
+                {
+                    name: '@activepieces/piece-http',
+                    displayName: 'HTTP',
+                    logoUrl: 'https://cdn.example.com/http.png',
+                    pieceType: 'OFFICIAL',
+                },
+            ]
+            const result = mapPiecesToPaletteItems(single)
+            expect(result).toHaveLength(4)
+            expect(result[3].pieceName).toBe('@activepieces/piece-http')
+            expect(result[3].pieceType).toBe('PIECE')
+        })
+
+        it('should produce valid PaletteDragData for all items', () => {
+            const result = mapPiecesToPaletteItems(mockPieces)
+            for (const item of result) {
+                expect(typeof item.pieceType).toBe('string')
+                expect(typeof item.pieceName).toBe('string')
+                expect(typeof item.displayName).toBe('string')
+                expect(typeof item.logoUrl).toBe('string')
+                expect(item.pieceType.length).toBeGreaterThan(0)
+                expect(item.pieceName.length).toBeGreaterThan(0)
+                expect(item.displayName.length).toBeGreaterThan(0)
+                expect(item.logoUrl.length).toBeGreaterThan(0)
+            }
+        })
+
+        it('should ignore source pieceType field (OFFICIAL/CUSTOM) and use PIECE', () => {
+            const customPiece: PieceSummaryForPalette[] = [
+                {
+                    name: '@custom/my-piece',
+                    displayName: 'My Custom Piece',
+                    logoUrl: 'https://cdn.example.com/custom.png',
+                    pieceType: 'CUSTOM',
+                },
+            ]
+            const result = mapPiecesToPaletteItems(customPiece)
+            const customItem = result.find(
+                (item) => item.pieceName === '@custom/my-piece',
+            )
+            expect(customItem).toBeDefined()
+            // pieceType в PaletteDragData — это FlowActionType.PIECE, не PieceType.CUSTOM
+            expect(customItem!.pieceType).toBe('PIECE')
         })
     })
 })

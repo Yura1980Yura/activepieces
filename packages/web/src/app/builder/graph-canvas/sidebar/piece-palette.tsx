@@ -1,10 +1,15 @@
-import { filterPaletteItems, type PaletteDragData } from '@activepieces/shared';
+import {
+  filterPaletteItems,
+  mapPiecesToPaletteItems,
+  type PaletteDragData,
+} from '@activepieces/shared';
 import { t } from 'i18next';
-import { SearchIcon } from 'lucide-react';
+import { Loader2Icon, SearchIcon } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
 
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { piecesHooks } from '@/features/pieces';
 
 import { PiecePaletteItem } from './piece-palette-item';
 
@@ -76,3 +81,43 @@ export const PiecePalette = React.memo(({ items }: PiecePaletteProps) => {
 });
 
 PiecePalette.displayName = 'PiecePalette';
+
+/**
+ * Connected version of PiecePalette that fetches real pieces data
+ * from the server via piecesHooks.usePieces().
+ *
+ * P2-B01: Подключение PiecePalette к реальным данным pieces.
+ *
+ * Маппинг: PieceMetadataModelSummary[] -> PaletteDragData[]
+ * - piece.name -> pieceName
+ * - piece.displayName -> displayName
+ * - piece.logoUrl -> logoUrl
+ * - FlowActionType.PIECE -> pieceType (для всех pieces)
+ * - Встроенные типы (Code, Loop, Router) добавляются статически
+ */
+export const ConnectedPiecePalette = React.memo(() => {
+  const { pieces, isLoading } = piecesHooks.usePieces({});
+
+  const paletteItems = useMemo(
+    () => (pieces ? mapPiecesToPaletteItems(pieces) : []),
+    [pieces],
+  );
+
+  if (isLoading) {
+    return (
+      <div
+        className="flex flex-col items-center justify-center h-full w-[220px] min-w-[220px] border-r border-solid border-border bg-background"
+        data-testid="piece-palette-loading"
+      >
+        <Loader2Icon className="size-6 animate-spin text-muted-foreground" />
+        <span className="text-sm text-muted-foreground mt-2">
+          {t('Loading pieces...')}
+        </span>
+      </div>
+    );
+  }
+
+  return <PiecePalette items={paletteItems} />;
+});
+
+ConnectedPiecePalette.displayName = 'ConnectedPiecePalette';
