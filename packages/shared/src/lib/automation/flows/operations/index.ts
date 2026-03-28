@@ -4,6 +4,7 @@ import { Metadata } from '../../../core/common/metadata'
 import { BranchCondition, CodeActionSchema, CodeActionSettings, LoopOnItemsActionSchema, LoopOnItemsActionSettings, PieceActionSchema, PieceActionSettings, RouterActionSchema, RouterActionSettings } from '../actions/action'
 import { FlowStatus } from '../flow'
 import { CanvasLayout, FlowVersion, FlowVersionState } from '../flow-version'
+import { GraphData } from '../graph-data'
 import { Note } from '../note'
 import { SampleDataSetting, SaveSampleDataRequest } from '../sample-data'
 import { EmptyTrigger, FlowTrigger, FlowTriggerType, PieceTrigger, PieceTriggerSettings } from '../triggers/trigger'
@@ -136,6 +137,7 @@ export const ImportFlowRequest = z.object({
     schemaVersion: Nullable(z.string()),
     notes: Nullable(z.array(Note)),
     canvasLayout: Nullable(CanvasLayout).optional(),
+    graphData: GraphData.optional(),
 })
 
 export type ImportFlowRequest = z.infer<typeof ImportFlowRequest>

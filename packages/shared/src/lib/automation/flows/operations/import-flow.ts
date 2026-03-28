@@ -1,9 +1,11 @@
 import { isNil } from '../../../core/common'
 import { FlowAction, FlowActionType } from '../actions/action'
 import { FlowVersion } from '../flow-version'
+import { GraphData } from '../graph-data'
 import { FlowTrigger, FlowTriggerType } from '../triggers/trigger'
 import { flowStructureUtil } from '../util/flow-structure-util'
 import { AddNoteRequest, DeleteNoteRequest, FlowOperationRequest, FlowOperationType, ImportFlowRequest, StepLocationRelativeToParent } from './index'
+import { GraphAddNodeRequest, GraphAddEdgeRequest } from './graph-operations'
 
 function createDeleteActionOperation(actionName: string): FlowOperationRequest {
     return {
@@ -129,6 +131,45 @@ function removeAnySubsequentAction(action: FlowAction): FlowAction {
     return clonedAction
 }
 
+/**
+ * Создаёт операции GRAPH_ADD_NODE для каждой ноды в graphData,
+ * и GRAPH_ADD_EDGE для каждого ребра.
+ * Предполагается что graphData ещё НЕ содержит нод (они будут добавлены после очистки).
+ */
+function _getGraphDataImportOperations(graphData: GraphData): FlowOperationRequest[] {
+    const operations: FlowOperationRequest[] = []
+
+    for (const node of graphData.nodes) {
+        operations.push({
+            type: FlowOperationType.GRAPH_ADD_NODE as const,
+            request: { node } as GraphAddNodeRequest,
+        })
+    }
+
+    for (const edge of graphData.edges) {
+        operations.push({
+            type: FlowOperationType.GRAPH_ADD_EDGE as const,
+            request: { edge } as GraphAddEdgeRequest,
+        })
+    }
+
+    return operations
+}
+
+/**
+ * Создаёт операции для удаления всех существующих graph nodes.
+ * Удаление ноды автоматически каскадно удаляет связанные рёбра.
+ */
+function _getGraphDataCleanupOperations(flowVersion: FlowVersion): FlowOperationRequest[] {
+    if (!flowVersion.graphData) {
+        return []
+    }
+    return flowVersion.graphData.nodes.map(node => ({
+        type: FlowOperationType.GRAPH_REMOVE_NODE as const,
+        request: { nodeId: node.id },
+    }))
+}
+
 function _importFlow(flowVersion: FlowVersion, request: ImportFlowRequest): FlowOperationRequest[] {
     const existingActions = flowStructureUtil.getAllNextActionsWithoutChildren(flowVersion.trigger)
 
@@ -137,12 +178,21 @@ function _importFlow(flowVersion: FlowVersion, request: ImportFlowRequest): Flow
     )
 
     const importOperations = _getImportOperationsForSteps(request.trigger)
- 
+
     const canvasLayoutOperations: FlowOperationRequest[] = request.canvasLayout !== undefined
         ? [{
             type: FlowOperationType.UPDATE_CANVAS_LAYOUT as const,
             request: { canvasLayout: request.canvasLayout ?? null },
         }]
+        : []
+
+    // Если graphData предоставлен — очищаем существующий граф и импортируем новый
+    const graphCleanupOperations = request.graphData
+        ? _getGraphDataCleanupOperations(flowVersion)
+        : []
+
+    const graphImportOperations = request.graphData
+        ? _getGraphDataImportOperations(request.graphData)
         : []
 
     return [
@@ -152,6 +202,8 @@ function _importFlow(flowVersion: FlowVersion, request: ImportFlowRequest): Flow
         ...importOperations,
         ..._getImportOperationsForNotes(flowVersion, request),
         ...canvasLayoutOperations,
+        ...graphCleanupOperations,
+        ...graphImportOperations,
     ]
 }
 
