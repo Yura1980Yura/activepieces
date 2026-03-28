@@ -1,0 +1,218 @@
+{
+    "name": "S1: Multi-Source ETL",
+    "description": "Trigger -> CODE(fetch) -> CODE(parse) -> CODE(transform) -> ROUTER(if records>0) -> CODE(store)/CODE(log empty)",
+    "flowDefinition": {
+        "displayName": "S1 - Multi-Source ETL",
+        "graphData": {
+            "nodes": [
+                {
+                    "id": "trigger",
+                    "type": "trigger",
+                    "position": { "x": 0, "y": 0 },
+                    "displayName": "Manual Trigger",
+                    "valid": true,
+                    "actionType": "PIECE",
+                    "settings": {
+                        "pieceName": "webhook",
+                        "pieceVersion": "1.0.0",
+                        "triggerName": "webhook_trigger",
+                        "input": {},
+                        "propertySettings": {}
+                    }
+                },
+                {
+                    "id": "s1_fetch_data",
+                    "type": "action",
+                    "position": { "x": 0, "y": 100 },
+                    "displayName": "Fetch CSV Data",
+                    "valid": true,
+                    "actionType": "CODE",
+                    "settings": {
+                        "input": {
+                            "url": "https://api.example.com/data.csv"
+                        },
+                        "sourceCode": { "packageJson": "", "code": "" }
+                    }
+                },
+                {
+                    "id": "s1_parse",
+                    "type": "action",
+                    "position": { "x": 0, "y": 200 },
+                    "displayName": "Parse CSV",
+                    "valid": true,
+                    "actionType": "CODE",
+                    "settings": {
+                        "input": {
+                            "csvText": "name,email,age\nAlice,alice@test.com,30\nBob,bob@test.com,25\nCharlie,charlie@test.com,35"
+                        },
+                        "sourceCode": { "packageJson": "", "code": "" }
+                    }
+                },
+                {
+                    "id": "s1_transform",
+                    "type": "action",
+                    "position": { "x": 0, "y": 300 },
+                    "displayName": "Transform: Add Timestamp",
+                    "valid": true,
+                    "actionType": "CODE",
+                    "settings": {
+                        "input": {
+                            "records": "{{ s1_parse }}"
+                        },
+                        "sourceCode": { "packageJson": "", "code": "" }
+                    }
+                },
+                {
+                    "id": "s1_router",
+                    "type": "router",
+                    "position": { "x": 0, "y": 400 },
+                    "displayName": "Router: Check Records",
+                    "valid": true,
+                    "actionType": "ROUTER",
+                    "settings": {
+                        "branches": [
+                            {
+                                "conditions": [
+                                    [
+                                        {
+                                            "firstValue": "{{ s1_transform.count }}",
+                                            "secondValue": "0",
+                                            "operator": "NUMBER_IS_GREATER_THAN"
+                                        }
+                                    ]
+                                ],
+                                "branchType": "CONDITION",
+                                "branchName": "Has Records"
+                            },
+                            {
+                                "branchType": "FALLBACK",
+                                "branchName": "Empty"
+                            }
+                        ],
+                        "executionType": "EXECUTE_FIRST_MATCH"
+                    }
+                },
+                {
+                    "id": "s1_store_result",
+                    "type": "action",
+                    "position": { "x": -150, "y": 500 },
+                    "displayName": "Store Result",
+                    "valid": true,
+                    "actionType": "CODE",
+                    "settings": {
+                        "input": {
+                            "records": "{{ s1_transform }}"
+                        },
+                        "sourceCode": { "packageJson": "", "code": "" }
+                    }
+                },
+                {
+                    "id": "s1_log_empty",
+                    "type": "action",
+                    "position": { "x": 150, "y": 500 },
+                    "displayName": "Log Empty",
+                    "valid": true,
+                    "actionType": "CODE",
+                    "settings": {
+                        "input": {
+                            "message": "No records found"
+                        },
+                        "sourceCode": { "packageJson": "", "code": "" }
+                    }
+                }
+            ],
+            "edges": [
+                {
+                    "id": "trigger-output-s1_fetch_data",
+                    "source": "trigger",
+                    "target": "s1_fetch_data",
+                    "sourceHandle": "output",
+                    "targetHandle": "input"
+                },
+                {
+                    "id": "s1_fetch_data-output-s1_parse",
+                    "source": "s1_fetch_data",
+                    "target": "s1_parse",
+                    "sourceHandle": "output",
+                    "targetHandle": "input"
+                },
+                {
+                    "id": "s1_parse-output-s1_transform",
+                    "source": "s1_parse",
+                    "target": "s1_transform",
+                    "sourceHandle": "output",
+                    "targetHandle": "input"
+                },
+                {
+                    "id": "s1_transform-output-s1_router",
+                    "source": "s1_transform",
+                    "target": "s1_router",
+                    "sourceHandle": "output",
+                    "targetHandle": "input"
+                },
+                {
+                    "id": "s1_router-branch-0-s1_store_result",
+                    "source": "s1_router",
+                    "target": "s1_store_result",
+                    "sourceHandle": "branch-0",
+                    "targetHandle": "input"
+                },
+                {
+                    "id": "s1_router-branch-1-s1_log_empty",
+                    "source": "s1_router",
+                    "target": "s1_log_empty",
+                    "sourceHandle": "branch-1",
+                    "targetHandle": "input"
+                }
+            ]
+        }
+    },
+    "triggerInput": {
+        "source": "manual",
+        "timestamp": "2026-03-28T00:00:00Z"
+    },
+    "expectedOutputs": {
+        "s1_fetch_data": {
+            "status": "SUCCEEDED",
+            "output": {
+                "body": "name,email,age\nAlice,alice@test.com,30\nBob,bob@test.com,25\nCharlie,charlie@test.com,35",
+                "statusCode": 200
+            }
+        },
+        "s1_parse": {
+            "status": "SUCCEEDED",
+            "output": {
+                "records": [
+                    { "name": "Alice", "email": "alice@test.com", "age": "30" },
+                    { "name": "Bob", "email": "bob@test.com", "age": "25" },
+                    { "name": "Charlie", "email": "charlie@test.com", "age": "35" }
+                ],
+                "count": 3
+            }
+        },
+        "s1_transform": {
+            "status": "SUCCEEDED",
+            "output": {
+                "records": [
+                    { "name": "Alice", "email": "alice@test.com", "age": "30", "processed": true },
+                    { "name": "Bob", "email": "bob@test.com", "age": "25", "processed": true },
+                    { "name": "Charlie", "email": "charlie@test.com", "age": "35", "processed": true }
+                ],
+                "count": 3
+            }
+        },
+        "s1_router": {
+            "status": "SUCCEEDED",
+            "output": {
+                "evaluatedBranches": [true, false]
+            }
+        },
+        "s1_store_result": {
+            "status": "SUCCEEDED",
+            "output": {
+                "key": "etl_result",
+                "count": 3
+            }
+        }
+    }
+}

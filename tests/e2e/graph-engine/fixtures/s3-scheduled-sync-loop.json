@@ -1,0 +1,172 @@
+{
+    "name": "S3: Scheduled Sync + Loop",
+    "description": "Trigger -> CODE(get items) -> LOOP(items) -> CODE(transform item) -> CODE(store item) [loop body] -> CODE(write summary) [after loop]",
+    "flowDefinition": {
+        "displayName": "S3 - Scheduled Sync + Loop",
+        "graphData": {
+            "nodes": [
+                {
+                    "id": "trigger",
+                    "type": "trigger",
+                    "position": { "x": 0, "y": 0 },
+                    "displayName": "Schedule Trigger",
+                    "valid": true,
+                    "actionType": "PIECE",
+                    "settings": {
+                        "pieceName": "webhook",
+                        "pieceVersion": "1.0.0",
+                        "triggerName": "webhook_trigger",
+                        "input": {},
+                        "propertySettings": {}
+                    }
+                },
+                {
+                    "id": "s3_get_items",
+                    "type": "action",
+                    "position": { "x": 0, "y": 100 },
+                    "displayName": "Get Items from API",
+                    "valid": true,
+                    "actionType": "CODE",
+                    "settings": {
+                        "input": {
+                            "endpoint": "/api/items"
+                        },
+                        "sourceCode": { "packageJson": "", "code": "" }
+                    }
+                },
+                {
+                    "id": "s3_loop",
+                    "type": "loop",
+                    "position": { "x": 0, "y": 200 },
+                    "displayName": "Loop Over Items",
+                    "valid": true,
+                    "actionType": "LOOP_ON_ITEMS",
+                    "settings": {
+                        "items": "{{ s3_get_items.items }}"
+                    }
+                },
+                {
+                    "id": "s3_transform_item",
+                    "type": "action",
+                    "position": { "x": 200, "y": 250 },
+                    "displayName": "Transform Item",
+                    "valid": true,
+                    "actionType": "CODE",
+                    "settings": {
+                        "input": {
+                            "item": "{{ s3_loop }}"
+                        },
+                        "sourceCode": { "packageJson": "", "code": "" }
+                    }
+                },
+                {
+                    "id": "s3_store_item",
+                    "type": "action",
+                    "position": { "x": 200, "y": 350 },
+                    "displayName": "Store Item",
+                    "valid": true,
+                    "actionType": "CODE",
+                    "settings": {
+                        "input": {
+                            "item": "{{ s3_transform_item }}"
+                        },
+                        "sourceCode": { "packageJson": "", "code": "" }
+                    }
+                },
+                {
+                    "id": "s3_write_summary",
+                    "type": "action",
+                    "position": { "x": 0, "y": 400 },
+                    "displayName": "Write Summary",
+                    "valid": true,
+                    "actionType": "CODE",
+                    "settings": {
+                        "input": {
+                            "totalItems": "{{ s3_get_items.count }}"
+                        },
+                        "sourceCode": { "packageJson": "", "code": "" }
+                    }
+                }
+            ],
+            "edges": [
+                {
+                    "id": "trigger-output-s3_get_items",
+                    "source": "trigger",
+                    "target": "s3_get_items",
+                    "sourceHandle": "output",
+                    "targetHandle": "input"
+                },
+                {
+                    "id": "s3_get_items-output-s3_loop",
+                    "source": "s3_get_items",
+                    "target": "s3_loop",
+                    "sourceHandle": "output",
+                    "targetHandle": "input"
+                },
+                {
+                    "id": "s3_loop-loop-output-s3_transform_item",
+                    "source": "s3_loop",
+                    "target": "s3_transform_item",
+                    "sourceHandle": "loop-output",
+                    "targetHandle": "input"
+                },
+                {
+                    "id": "s3_transform_item-output-s3_store_item",
+                    "source": "s3_transform_item",
+                    "target": "s3_store_item",
+                    "sourceHandle": "output",
+                    "targetHandle": "input"
+                },
+                {
+                    "id": "s3_loop-output-s3_write_summary",
+                    "source": "s3_loop",
+                    "target": "s3_write_summary",
+                    "sourceHandle": "output",
+                    "targetHandle": "input"
+                }
+            ]
+        }
+    },
+    "triggerInput": {
+        "schedule": "0 */6 * * *",
+        "timestamp": "2026-03-28T06:00:00Z"
+    },
+    "expectedOutputs": {
+        "s3_get_items": {
+            "status": "SUCCEEDED",
+            "output": {
+                "items": [
+                    { "id": "item-1", "value": 10 },
+                    { "id": "item-2", "value": 20 },
+                    { "id": "item-3", "value": 30 }
+                ],
+                "count": 3
+            }
+        },
+        "s3_loop": {
+            "status": "SUCCEEDED",
+            "output": {
+                "iterations": 3
+            }
+        },
+        "s3_transform_item": {
+            "status": "SUCCEEDED",
+            "output": {
+                "processed": true
+            }
+        },
+        "s3_store_item": {
+            "status": "SUCCEEDED",
+            "output": {
+                "stored": true
+            }
+        },
+        "s3_write_summary": {
+            "status": "SUCCEEDED",
+            "output": {
+                "summary": "Processed 3 items",
+                "totalItems": 3
+            }
+        }
+    }
+}

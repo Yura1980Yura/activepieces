@@ -1,0 +1,268 @@
+{
+    "name": "S2: Webhook Processor",
+    "description": "Trigger -> CODE(enrich) -> CODE(normalize) -> ROUTER(switch by type, EXECUTE_FIRST_MATCH) -> 4 branches (order/payment/refund/fallback)",
+    "flowDefinition": {
+        "displayName": "S2 - Webhook Processor",
+        "graphData": {
+            "nodes": [
+                {
+                    "id": "trigger",
+                    "type": "trigger",
+                    "position": { "x": 0, "y": 0 },
+                    "displayName": "Webhook Trigger",
+                    "valid": true,
+                    "actionType": "PIECE",
+                    "settings": {
+                        "pieceName": "webhook",
+                        "pieceVersion": "1.0.0",
+                        "triggerName": "webhook_trigger",
+                        "input": {},
+                        "propertySettings": {}
+                    }
+                },
+                {
+                    "id": "s2_enrich",
+                    "type": "action",
+                    "position": { "x": 0, "y": 100 },
+                    "displayName": "Enrich Data",
+                    "valid": true,
+                    "actionType": "CODE",
+                    "settings": {
+                        "input": {
+                            "type": "order",
+                            "orderId": "ORD-123",
+                            "amount": 99.99
+                        },
+                        "sourceCode": { "packageJson": "", "code": "" }
+                    }
+                },
+                {
+                    "id": "s2_normalize",
+                    "type": "action",
+                    "position": { "x": 0, "y": 200 },
+                    "displayName": "Normalize Format",
+                    "valid": true,
+                    "actionType": "CODE",
+                    "settings": {
+                        "input": {
+                            "data": "{{ s2_enrich }}"
+                        },
+                        "sourceCode": { "packageJson": "", "code": "" }
+                    }
+                },
+                {
+                    "id": "s2_router",
+                    "type": "router",
+                    "position": { "x": 0, "y": 300 },
+                    "displayName": "Route by Type",
+                    "valid": true,
+                    "actionType": "ROUTER",
+                    "settings": {
+                        "branches": [
+                            {
+                                "conditions": [
+                                    [
+                                        {
+                                            "firstValue": "{{ s2_normalize.type }}",
+                                            "secondValue": "order",
+                                            "operator": "TEXT_EXACTLY_MATCHES"
+                                        }
+                                    ]
+                                ],
+                                "branchType": "CONDITION",
+                                "branchName": "Orders"
+                            },
+                            {
+                                "conditions": [
+                                    [
+                                        {
+                                            "firstValue": "{{ s2_normalize.type }}",
+                                            "secondValue": "payment",
+                                            "operator": "TEXT_EXACTLY_MATCHES"
+                                        }
+                                    ]
+                                ],
+                                "branchType": "CONDITION",
+                                "branchName": "Payments"
+                            },
+                            {
+                                "conditions": [
+                                    [
+                                        {
+                                            "firstValue": "{{ s2_normalize.type }}",
+                                            "secondValue": "refund",
+                                            "operator": "TEXT_EXACTLY_MATCHES"
+                                        }
+                                    ]
+                                ],
+                                "branchType": "CONDITION",
+                                "branchName": "Refunds"
+                            },
+                            {
+                                "branchType": "FALLBACK",
+                                "branchName": "Unknown"
+                            }
+                        ],
+                        "executionType": "EXECUTE_FIRST_MATCH"
+                    }
+                },
+                {
+                    "id": "s2_store_orders",
+                    "type": "action",
+                    "position": { "x": -300, "y": 400 },
+                    "displayName": "Store Order",
+                    "valid": true,
+                    "actionType": "CODE",
+                    "settings": {
+                        "input": {
+                            "key": "orders",
+                            "orderId": "{{ s2_normalize.orderId }}",
+                            "customerId": "{{ s2_normalize.customerId }}",
+                            "amount": "{{ s2_normalize.amount }}"
+                        },
+                        "sourceCode": { "packageJson": "", "code": "" }
+                    }
+                },
+                {
+                    "id": "s2_store_payments",
+                    "type": "action",
+                    "position": { "x": -100, "y": 400 },
+                    "displayName": "Store Payment",
+                    "valid": true,
+                    "actionType": "CODE",
+                    "settings": {
+                        "input": {
+                            "key": "payments",
+                            "data": "{{ s2_normalize }}"
+                        },
+                        "sourceCode": { "packageJson": "", "code": "" }
+                    }
+                },
+                {
+                    "id": "s2_store_refunds",
+                    "type": "action",
+                    "position": { "x": 100, "y": 400 },
+                    "displayName": "Store Refund",
+                    "valid": true,
+                    "actionType": "CODE",
+                    "settings": {
+                        "input": {
+                            "key": "refunds",
+                            "data": "{{ s2_normalize }}"
+                        },
+                        "sourceCode": { "packageJson": "", "code": "" }
+                    }
+                },
+                {
+                    "id": "s2_log_unknown",
+                    "type": "action",
+                    "position": { "x": 300, "y": 400 },
+                    "displayName": "Log Unknown Type",
+                    "valid": true,
+                    "actionType": "CODE",
+                    "settings": {
+                        "input": {
+                            "message": "Unknown type",
+                            "data": "{{ s2_normalize }}"
+                        },
+                        "sourceCode": { "packageJson": "", "code": "" }
+                    }
+                }
+            ],
+            "edges": [
+                {
+                    "id": "trigger-output-s2_enrich",
+                    "source": "trigger",
+                    "target": "s2_enrich",
+                    "sourceHandle": "output",
+                    "targetHandle": "input"
+                },
+                {
+                    "id": "s2_enrich-output-s2_normalize",
+                    "source": "s2_enrich",
+                    "target": "s2_normalize",
+                    "sourceHandle": "output",
+                    "targetHandle": "input"
+                },
+                {
+                    "id": "s2_normalize-output-s2_router",
+                    "source": "s2_normalize",
+                    "target": "s2_router",
+                    "sourceHandle": "output",
+                    "targetHandle": "input"
+                },
+                {
+                    "id": "s2_router-branch-0-s2_store_orders",
+                    "source": "s2_router",
+                    "target": "s2_store_orders",
+                    "sourceHandle": "branch-0",
+                    "targetHandle": "input"
+                },
+                {
+                    "id": "s2_router-branch-1-s2_store_payments",
+                    "source": "s2_router",
+                    "target": "s2_store_payments",
+                    "sourceHandle": "branch-1",
+                    "targetHandle": "input"
+                },
+                {
+                    "id": "s2_router-branch-2-s2_store_refunds",
+                    "source": "s2_router",
+                    "target": "s2_store_refunds",
+                    "sourceHandle": "branch-2",
+                    "targetHandle": "input"
+                },
+                {
+                    "id": "s2_router-branch-3-s2_log_unknown",
+                    "source": "s2_router",
+                    "target": "s2_log_unknown",
+                    "sourceHandle": "branch-3",
+                    "targetHandle": "input"
+                }
+            ]
+        }
+    },
+    "triggerInput": {
+        "type": "order",
+        "orderId": "ORD-123",
+        "amount": 99.99
+    },
+    "expectedOutputs": {
+        "s2_enrich": {
+            "status": "SUCCEEDED",
+            "output": {
+                "type": "order",
+                "orderId": "ORD-123",
+                "amount": 99.99,
+                "customerId": "CUST-456",
+                "customerName": "Test User"
+            }
+        },
+        "s2_normalize": {
+            "status": "SUCCEEDED",
+            "output": {
+                "type": "order",
+                "orderId": "ORD-123",
+                "amount": 99.99,
+                "customerId": "CUST-456",
+                "customerName": "Test User",
+                "normalizedAt": "2026-03-28T00:00:00Z"
+            }
+        },
+        "s2_router": {
+            "status": "SUCCEEDED",
+            "output": {
+                "evaluatedBranches": [true, false, false, false]
+            }
+        },
+        "s2_store_orders": {
+            "status": "SUCCEEDED",
+            "output": {
+                "key": "orders",
+                "orderId": "ORD-123",
+                "customerId": "CUST-456",
+                "amount": 99.99
+            }
+        }
+    }
+}

@@ -1,0 +1,299 @@
+{
+    "name": "S4: Parallel Fan-Out/Fan-In",
+    "description": "Trigger -> ROUTER(EXECUTE_ALL_MATCH, 3 branches) -> CODE(users)/CODE(orders)/CODE(products) -> CODE(merge) [after router]",
+    "flowDefinition": {
+        "displayName": "S4 - Parallel Fan-Out/Fan-In",
+        "graphData": {
+            "nodes": [
+                {
+                    "id": "trigger",
+                    "type": "trigger",
+                    "position": { "x": 0, "y": 0 },
+                    "displayName": "Manual Trigger",
+                    "valid": true,
+                    "actionType": "PIECE",
+                    "settings": {
+                        "pieceName": "webhook",
+                        "pieceVersion": "1.0.0",
+                        "triggerName": "webhook_trigger",
+                        "input": {},
+                        "propertySettings": {}
+                    }
+                },
+                {
+                    "id": "s4_router",
+                    "type": "router",
+                    "position": { "x": 0, "y": 100 },
+                    "displayName": "Fan-Out Router",
+                    "valid": true,
+                    "actionType": "ROUTER",
+                    "settings": {
+                        "branches": [
+                            {
+                                "conditions": [
+                                    [
+                                        {
+                                            "firstValue": "true",
+                                            "operator": "BOOLEAN_IS_TRUE"
+                                        }
+                                    ]
+                                ],
+                                "branchType": "CONDITION",
+                                "branchName": "Users Branch"
+                            },
+                            {
+                                "conditions": [
+                                    [
+                                        {
+                                            "firstValue": "true",
+                                            "operator": "BOOLEAN_IS_TRUE"
+                                        }
+                                    ]
+                                ],
+                                "branchType": "CONDITION",
+                                "branchName": "Orders Branch"
+                            },
+                            {
+                                "conditions": [
+                                    [
+                                        {
+                                            "firstValue": "true",
+                                            "operator": "BOOLEAN_IS_TRUE"
+                                        }
+                                    ]
+                                ],
+                                "branchType": "CONDITION",
+                                "branchName": "Products Branch"
+                            }
+                        ],
+                        "executionType": "EXECUTE_ALL_MATCH"
+                    }
+                },
+                {
+                    "id": "s4_process_users",
+                    "type": "action",
+                    "position": { "x": -200, "y": 200 },
+                    "displayName": "Process Users",
+                    "valid": true,
+                    "actionType": "CODE",
+                    "settings": {
+                        "input": {
+                            "source": "users"
+                        },
+                        "sourceCode": { "packageJson": "", "code": "" }
+                    }
+                },
+                {
+                    "id": "s4_store_users",
+                    "type": "action",
+                    "position": { "x": -200, "y": 300 },
+                    "displayName": "Store User Count",
+                    "valid": true,
+                    "actionType": "CODE",
+                    "settings": {
+                        "input": {
+                            "key": "user_count",
+                            "value": "{{ s4_process_users.count }}"
+                        },
+                        "sourceCode": { "packageJson": "", "code": "" }
+                    }
+                },
+                {
+                    "id": "s4_process_orders",
+                    "type": "action",
+                    "position": { "x": 0, "y": 200 },
+                    "displayName": "Process Orders",
+                    "valid": true,
+                    "actionType": "CODE",
+                    "settings": {
+                        "input": {
+                            "source": "orders"
+                        },
+                        "sourceCode": { "packageJson": "", "code": "" }
+                    }
+                },
+                {
+                    "id": "s4_store_orders",
+                    "type": "action",
+                    "position": { "x": 0, "y": 300 },
+                    "displayName": "Store Order Total",
+                    "valid": true,
+                    "actionType": "CODE",
+                    "settings": {
+                        "input": {
+                            "key": "order_total",
+                            "value": "{{ s4_process_orders.total }}"
+                        },
+                        "sourceCode": { "packageJson": "", "code": "" }
+                    }
+                },
+                {
+                    "id": "s4_process_products",
+                    "type": "action",
+                    "position": { "x": 200, "y": 200 },
+                    "displayName": "Process Products",
+                    "valid": true,
+                    "actionType": "CODE",
+                    "settings": {
+                        "input": {
+                            "source": "products"
+                        },
+                        "sourceCode": { "packageJson": "", "code": "" }
+                    }
+                },
+                {
+                    "id": "s4_store_products",
+                    "type": "action",
+                    "position": { "x": 200, "y": 300 },
+                    "displayName": "Store Product Count",
+                    "valid": true,
+                    "actionType": "CODE",
+                    "settings": {
+                        "input": {
+                            "key": "product_count",
+                            "value": "{{ s4_process_products.count }}"
+                        },
+                        "sourceCode": { "packageJson": "", "code": "" }
+                    }
+                },
+                {
+                    "id": "s4_merge",
+                    "type": "action",
+                    "position": { "x": 0, "y": 400 },
+                    "displayName": "Merge Results",
+                    "valid": true,
+                    "actionType": "CODE",
+                    "settings": {
+                        "input": {
+                            "userCount": "{{ s4_store_users.value }}",
+                            "orderTotal": "{{ s4_store_orders.value }}",
+                            "productCount": "{{ s4_store_products.value }}"
+                        },
+                        "sourceCode": { "packageJson": "", "code": "" }
+                    }
+                }
+            ],
+            "edges": [
+                {
+                    "id": "trigger-output-s4_router",
+                    "source": "trigger",
+                    "target": "s4_router",
+                    "sourceHandle": "output",
+                    "targetHandle": "input"
+                },
+                {
+                    "id": "s4_router-branch-0-s4_process_users",
+                    "source": "s4_router",
+                    "target": "s4_process_users",
+                    "sourceHandle": "branch-0",
+                    "targetHandle": "input"
+                },
+                {
+                    "id": "s4_process_users-output-s4_store_users",
+                    "source": "s4_process_users",
+                    "target": "s4_store_users",
+                    "sourceHandle": "output",
+                    "targetHandle": "input"
+                },
+                {
+                    "id": "s4_router-branch-1-s4_process_orders",
+                    "source": "s4_router",
+                    "target": "s4_process_orders",
+                    "sourceHandle": "branch-1",
+                    "targetHandle": "input"
+                },
+                {
+                    "id": "s4_process_orders-output-s4_store_orders",
+                    "source": "s4_process_orders",
+                    "target": "s4_store_orders",
+                    "sourceHandle": "output",
+                    "targetHandle": "input"
+                },
+                {
+                    "id": "s4_router-branch-2-s4_process_products",
+                    "source": "s4_router",
+                    "target": "s4_process_products",
+                    "sourceHandle": "branch-2",
+                    "targetHandle": "input"
+                },
+                {
+                    "id": "s4_process_products-output-s4_store_products",
+                    "source": "s4_process_products",
+                    "target": "s4_store_products",
+                    "sourceHandle": "output",
+                    "targetHandle": "input"
+                },
+                {
+                    "id": "s4_router-output-s4_merge",
+                    "source": "s4_router",
+                    "target": "s4_merge",
+                    "sourceHandle": "output",
+                    "targetHandle": "input"
+                }
+            ]
+        }
+    },
+    "triggerInput": {
+        "source": "manual",
+        "timestamp": "2026-03-28T00:00:00Z"
+    },
+    "expectedOutputs": {
+        "s4_router": {
+            "status": "SUCCEEDED",
+            "output": {
+                "evaluatedBranches": [true, true, true]
+            }
+        },
+        "s4_process_users": {
+            "status": "SUCCEEDED",
+            "output": {
+                "users": [{"id": 1}, {"id": 2}, {"id": 3}],
+                "count": 3
+            }
+        },
+        "s4_store_users": {
+            "status": "SUCCEEDED",
+            "output": {
+                "key": "user_count",
+                "value": 3
+            }
+        },
+        "s4_process_orders": {
+            "status": "SUCCEEDED",
+            "output": {
+                "orders": [{"amount": 100}, {"amount": 200}],
+                "total": 300
+            }
+        },
+        "s4_store_orders": {
+            "status": "SUCCEEDED",
+            "output": {
+                "key": "order_total",
+                "value": 300
+            }
+        },
+        "s4_process_products": {
+            "status": "SUCCEEDED",
+            "output": {
+                "products": [{"sku": "A"}, {"sku": "B"}, {"sku": "C"}, {"sku": "D"}],
+                "count": 4
+            }
+        },
+        "s4_store_products": {
+            "status": "SUCCEEDED",
+            "output": {
+                "key": "product_count",
+                "value": 4
+            }
+        },
+        "s4_merge": {
+            "status": "SUCCEEDED",
+            "output": {
+                "userCount": 3,
+                "orderTotal": 300,
+                "productCount": 4,
+                "summary": "Users: 3, Orders: 300, Products: 4"
+            }
+        }
+    }
+}
