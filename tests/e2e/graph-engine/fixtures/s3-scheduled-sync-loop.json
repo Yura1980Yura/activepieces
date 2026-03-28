@@ -54,7 +54,7 @@
                     "actionType": "CODE",
                     "settings": {
                         "input": {
-                            "item": "{{ s3_loop }}"
+                            "item": "{{ s3_loop.item }}"
                         },
                         "sourceCode": { "packageJson": "", "code": "" }
                     }
