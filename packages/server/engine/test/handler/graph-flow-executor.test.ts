@@ -265,7 +265,7 @@ describe('graphFlowExecutor', () => {
             expect(result.steps.loop_step.type).toBe(FlowActionType.LOOP_ON_ITEMS)
         })
 
-        it('должен бросить ошибку для ROUTER типа', async () => {
+        it('должен исполнить ROUTER ноду (базовая проверка wiring)', async () => {
             const graphData: GraphData = {
                 nodes: [
                     {
@@ -284,7 +284,16 @@ describe('graphFlowExecutor', () => {
                         displayName: 'Router',
                         valid: true,
                         actionType: FlowActionType.ROUTER,
-                        settings: {},
+                        settings: {
+                            branches: [
+                                {
+                                    conditions: [[{ firstValue: 'a', secondValue: 'a', operator: 'TEXT_EXACTLY_MATCHES' }]],
+                                    branchType: 'CONDITION',
+                                    branchName: 'Branch 1',
+                                },
+                            ],
+                            executionType: 'EXECUTE_FIRST_MATCH',
+                        },
                     },
                 ],
                 edges: [
@@ -294,12 +303,16 @@ describe('graphFlowExecutor', () => {
 
             const { adjacency } = buildAdjacencyForTest(graphData)
 
-            await expect(graphFlowExecutor.executeGraph({
+            const result = await graphFlowExecutor.executeGraph({
                 startNodeId: 'router_step',
                 adjacency,
                 executionState: FlowExecutorContext.empty(),
                 constants: generateMockEngineConstants(),
-            })).rejects.toThrow('Router executor not implemented in graph executor yet')
+            })
+
+            expect(result.verdict.status).toBe(FlowRunStatus.RUNNING)
+            expect(result.steps.router_step).toBeDefined()
+            expect(result.steps.router_step.type).toBe(FlowActionType.ROUTER)
         })
     })
 

@@ -25,6 +25,7 @@ import { codeExecutor } from './code-executor'
 import { EngineConstants } from './context/engine-constants'
 import { FlowExecutorContext } from './context/flow-execution-context'
 import { graphLoopExecutor } from './graph-loop-executor'
+import { graphRouterExecutor } from './graph-router-executor'
 import { pieceExecutor } from './piece-executor'
 
 /**
@@ -35,8 +36,7 @@ import { pieceExecutor } from './piece-executor'
 
 /**
  * Получить executor для данного типа действия.
- * LOOP_ON_ITEMS обрабатывается отдельно в executeGraph (нужен adjacencyMap).
- * ROUTER — throw NotImplementedYet (будет в P2-A06).
+ * LOOP_ON_ITEMS и ROUTER обрабатываются отдельно в executeGraph (нужен adjacencyMap).
  */
 function getGraphExecutorForAction(actionType: string): BaseExecutor<FlowAction> {
     switch (actionType) {
@@ -52,9 +52,11 @@ function getGraphExecutorForAction(actionType: string): BaseExecutor<FlowAction>
                 'LOOP_ON_ITEMS must be handled via graphLoopExecutor with adjacencyMap, not via getGraphExecutorForAction',
             )
         case FlowActionType.ROUTER:
+            // Обрабатывается в executeGraph через graphRouterExecutor.handle()
+            // Этот путь не должен вызываться, но на случай ошибки — throw
             throw new EngineGenericError(
-                'GraphRouterNotImplementedError',
-                'Router executor not implemented in graph executor yet (planned for P2-A06)',
+                'GraphRouterDirectCallError',
+                'ROUTER must be handled via graphRouterExecutor with adjacencyMap, not via getGraphExecutorForAction',
             )
         default:
             throw new EngineGenericError(
@@ -213,6 +215,15 @@ export const graphFlowExecutor = {
             if (node.actionType === FlowActionType.LOOP_ON_ITEMS) {
                 // LOOP_ON_ITEMS требует adjacencyMap для навигации по телу цикла
                 flowExecutionContext = await graphLoopExecutor.handle({
+                    action,
+                    executionState: flowExecutionContext,
+                    constants,
+                    adjacencyMap: adjacency,
+                })
+            }
+            else if (node.actionType === FlowActionType.ROUTER) {
+                // ROUTER требует adjacencyMap для навигации по веткам (branch-N edges)
+                flowExecutionContext = await graphRouterExecutor.handle({
                     action,
                     executionState: flowExecutionContext,
                     constants,
