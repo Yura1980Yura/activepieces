@@ -540,10 +540,11 @@ function syncTriggerFromGraphData(flowVersion: FlowVersion): FlowVersion {
         if (!hasEdgeFromTrigger) {
             return flowVersion
         }
+        const triggerPos = flowVersion.canvasLayout?.positions?.[flowVersion.trigger.name] ?? { x: 0, y: 0 }
         graphData.nodes.push({
             id: flowVersion.trigger.name,
             type: 'trigger',
-            position: { x: 0, y: 0 },
+            position: { x: triggerPos.x, y: triggerPos.y },
             displayName: flowVersion.trigger.displayName,
             valid: flowVersion.trigger.valid,
             actionType: flowVersion.trigger.type,

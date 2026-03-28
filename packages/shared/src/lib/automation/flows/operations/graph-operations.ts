@@ -126,15 +126,29 @@ export const _graphRemoveEdge = (flowVersion: FlowVersion, request: GraphRemoveE
  */
 export const _graphMoveNode = (flowVersion: FlowVersion, request: GraphMoveNodeRequest): FlowVersion => {
     const cloned: FlowVersion = JSON.parse(JSON.stringify(flowVersion))
-    if (!cloned.graphData) {
-        throw new Error(`[GRAPH_MOVE_NODE] graphData отсутствует`)
+
+    // Обновляем позицию в graphData если нода там есть
+    if (cloned.graphData) {
+        const node = cloned.graphData.nodes.find((n) => n.id === request.nodeId)
+        if (node) {
+            node.position.x = request.position.x
+            node.position.y = request.position.y
+        }
     }
-    const node = cloned.graphData.nodes.find((n) => n.id === request.nodeId)
-    if (!node) {
-        throw new Error(`[GRAPH_MOVE_NODE] Нода с id="${request.nodeId}" не найдена`)
+
+    // Всегда обновляем canvasLayout — основной источник позиций для trigger
+    // и нод из linked-list, которых может не быть в graphData
+    if (!cloned.canvasLayout) {
+        cloned.canvasLayout = { positions: {} }
     }
-    node.position.x = request.position.x
-    node.position.y = request.position.y
+    if (!cloned.canvasLayout.positions) {
+        cloned.canvasLayout.positions = {}
+    }
+    cloned.canvasLayout.positions[request.nodeId] = {
+        x: request.position.x,
+        y: request.position.y,
+    }
+
     return cloned
 }
 
