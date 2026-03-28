@@ -1,4 +1,5 @@
 import { FlowVersion } from '../flow-version'
+import { GraphEdgeDefinition } from '../graph-data'
 import { validateConnection } from './connection-validator'
 import { classifyEdges, GRAPH_EDGE_TYPES } from './graph-edge-utils'
 import { linkedListToGraph, migrateCanvasLayout, GraphNode, GraphEdge } from './graph-converter'
@@ -212,5 +213,51 @@ export function createIsValidConnection(
             edges,
         )
         return result.valid
+    }
+}
+
+/**
+ * Создать FlowOperationRequest типа GRAPH_ADD_EDGE из ReactFlow Connection.
+ *
+ * Чистая функция маппинга: конвертирует ConnectionParams
+ * в формат GRAPH_ADD_EDGE с GraphEdgeDefinition.
+ *
+ * Валидация (cycle detection, handle rules, max 1 per handle)
+ * НЕ выполняется здесь — вызывающий код должен провести проверку
+ * через validateConnection() / createIsValidConnection() ДО вызова.
+ *
+ * ID ребра формируется по конвенции "{source}-{sourceHandle}-{target}".
+ *
+ * P2-B03: Замена прямого applyGraphConnect на GRAPH_ADD_EDGE операцию.
+ *
+ * @param connection - Параметры соединения из ReactFlow (source, target, handles)
+ * @returns Объект с type=GRAPH_ADD_EDGE и edge: GraphEdgeDefinition, или null если параметры неполные
+ */
+export function createGraphAddEdgeFromConnection(
+    connection: ConnectionParams,
+): {
+    type: 'GRAPH_ADD_EDGE'
+    request: {
+        edge: GraphEdgeDefinition
+    }
+} | null {
+    const { source, target, sourceHandle, targetHandle } = connection
+    if (!source || !target || !sourceHandle || !targetHandle) {
+        return null
+    }
+
+    const edge: GraphEdgeDefinition = {
+        id: `${source}-${sourceHandle}-${target}`,
+        source,
+        target,
+        sourceHandle,
+        targetHandle,
+    }
+
+    return {
+        type: 'GRAPH_ADD_EDGE',
+        request: {
+            edge,
+        },
     }
 }

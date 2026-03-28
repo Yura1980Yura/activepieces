@@ -13,6 +13,7 @@ import {
     createEdgeTypesConfig,
     buildGraphFromFlowVersion,
     createIsValidConnection,
+    createGraphAddEdgeFromConnection,
     GRAPH_NODE_TYPE_KEYS,
     CANVAS_CONTROL_ACTIONS,
     getCanvasControlActions,
@@ -522,5 +523,155 @@ describe('createIsValidConnection', () => {
         ]
         const isValid = createIsValidConnection(nodes, [])
         expect(isValid({ source: 'a', target: 'b', sourceHandle: 'loop-output', targetHandle: 'input' })).toBe(false)
+    })
+})
+
+// === createGraphAddEdgeFromConnection ===
+
+describe('createGraphAddEdgeFromConnection', () => {
+    it('должен создать GRAPH_ADD_EDGE операцию из валидного ConnectionParams', () => {
+        const result = createGraphAddEdgeFromConnection({
+            source: 'step_1',
+            target: 'step_2',
+            sourceHandle: 'output',
+            targetHandle: 'input',
+        })
+
+        expect(result).not.toBeNull()
+        expect(result!.type).toBe('GRAPH_ADD_EDGE')
+        expect(result!.request.edge.id).toBe('step_1-output-step_2')
+        expect(result!.request.edge.source).toBe('step_1')
+        expect(result!.request.edge.target).toBe('step_2')
+        expect(result!.request.edge.sourceHandle).toBe('output')
+        expect(result!.request.edge.targetHandle).toBe('input')
+    })
+
+    it('должен вернуть null при null source', () => {
+        const result = createGraphAddEdgeFromConnection({
+            source: null,
+            target: 'step_2',
+            sourceHandle: 'output',
+            targetHandle: 'input',
+        })
+        expect(result).toBeNull()
+    })
+
+    it('должен вернуть null при null target', () => {
+        const result = createGraphAddEdgeFromConnection({
+            source: 'step_1',
+            target: null,
+            sourceHandle: 'output',
+            targetHandle: 'input',
+        })
+        expect(result).toBeNull()
+    })
+
+    it('должен вернуть null при null sourceHandle', () => {
+        const result = createGraphAddEdgeFromConnection({
+            source: 'step_1',
+            target: 'step_2',
+            sourceHandle: null,
+            targetHandle: 'input',
+        })
+        expect(result).toBeNull()
+    })
+
+    it('должен вернуть null при null targetHandle', () => {
+        const result = createGraphAddEdgeFromConnection({
+            source: 'step_1',
+            target: 'step_2',
+            sourceHandle: 'output',
+            targetHandle: null,
+        })
+        expect(result).toBeNull()
+    })
+
+    it('должен вернуть null при всех null параметрах', () => {
+        const result = createGraphAddEdgeFromConnection({
+            source: null,
+            target: null,
+            sourceHandle: null,
+            targetHandle: null,
+        })
+        expect(result).toBeNull()
+    })
+
+    it('должен формировать правильный ID для loop-output handle', () => {
+        const result = createGraphAddEdgeFromConnection({
+            source: 'loop_1',
+            target: 'step_2',
+            sourceHandle: 'loop-output',
+            targetHandle: 'input',
+        })
+
+        expect(result).not.toBeNull()
+        expect(result!.request.edge.id).toBe('loop_1-loop-output-step_2')
+        expect(result!.request.edge.sourceHandle).toBe('loop-output')
+    })
+
+    it('должен формировать правильный ID для branch-N handle', () => {
+        const result = createGraphAddEdgeFromConnection({
+            source: 'router_1',
+            target: 'step_3',
+            sourceHandle: 'branch-0',
+            targetHandle: 'input',
+        })
+
+        expect(result).not.toBeNull()
+        expect(result!.request.edge.id).toBe('router_1-branch-0-step_3')
+        expect(result!.request.edge.sourceHandle).toBe('branch-0')
+    })
+
+    it('должен возвращать GraphEdgeDefinition-совместимый объект', () => {
+        const result = createGraphAddEdgeFromConnection({
+            source: 'a',
+            target: 'b',
+            sourceHandle: 'output',
+            targetHandle: 'input',
+        })
+
+        expect(result).not.toBeNull()
+        const edge = result!.request.edge
+        // Проверяем все обязательные поля GraphEdgeDefinition
+        expect(typeof edge.id).toBe('string')
+        expect(typeof edge.source).toBe('string')
+        expect(typeof edge.target).toBe('string')
+        expect(typeof edge.sourceHandle).toBe('string')
+        expect(typeof edge.targetHandle).toBe('string')
+        // Не должно быть лишних полей
+        expect(Object.keys(edge).sort()).toEqual(['id', 'source', 'sourceHandle', 'target', 'targetHandle'])
+    })
+
+    it('должен конвертировать ID по конвенции {source}-{sourceHandle}-{target}', () => {
+        const cases = [
+            { source: 'trigger', sourceHandle: 'output', target: 'step_1', expectedId: 'trigger-output-step_1' },
+            { source: 'loop_1', sourceHandle: 'loop-output', target: 'child', expectedId: 'loop_1-loop-output-child' },
+            { source: 'router_1', sourceHandle: 'branch-2', target: 'b2_child', expectedId: 'router_1-branch-2-b2_child' },
+        ]
+
+        for (const { source, sourceHandle, target, expectedId } of cases) {
+            const result = createGraphAddEdgeFromConnection({
+                source,
+                target,
+                sourceHandle,
+                targetHandle: 'input',
+            })
+            expect(result).not.toBeNull()
+            expect(result!.request.edge.id).toBe(expectedId)
+        }
+    })
+
+    it('не должен выполнять валидацию (это ответственность вызывающего)', () => {
+        // Самоподключение — createGraphAddEdgeFromConnection не валидирует, просто создаёт
+        const result = createGraphAddEdgeFromConnection({
+            source: 'step_1',
+            target: 'step_1',
+            sourceHandle: 'output',
+            targetHandle: 'input',
+        })
+        // Функция не валидирует — она создаёт операцию
+        expect(result).not.toBeNull()
+        expect(result!.request.edge.source).toBe('step_1')
+        expect(result!.request.edge.target).toBe('step_1')
     })
 })

@@ -8,7 +8,8 @@ import {
   autoLayoutGraphNodes,
   removeGraphNodes,
   removeGraphEdges,
-  applyGraphConnect,
+  createIsValidConnection,
+  createGraphAddEdgeFromConnection,
   type GraphNode,
   type ClassifiedGraphEdge,
 } from '@activepieces/shared';
@@ -160,21 +161,32 @@ export const createGraphState = (
     },
 
     onGraphConnect: (connection: Connection) => {
-      set((state) => {
-        const newEdges = applyGraphConnect(
-          state.graphNodes,
-          state.graphEdges,
-          {
-            source: connection.source,
-            target: connection.target,
-            sourceHandle: connection.sourceHandle ?? null,
-            targetHandle: connection.targetHandle ?? null,
-          },
-        );
-        if (newEdges) {
-          return { graphEdges: newEdges };
-        }
-        return state;
+      const state = get();
+      const connectionParams = {
+        source: connection.source,
+        target: connection.target,
+        sourceHandle: connection.sourceHandle ?? null,
+        targetHandle: connection.targetHandle ?? null,
+      };
+
+      // Валидация через connection-validator (cycle, handle rules, max 1 per handle)
+      const isValid = createIsValidConnection(
+        state.graphNodes,
+        state.graphEdges,
+      );
+      if (!isValid(connectionParams)) {
+        return;
+      }
+
+      // Создать GRAPH_ADD_EDGE операцию и dispatch через applyOperation
+      const operation = createGraphAddEdgeFromConnection(connectionParams);
+      if (!operation) {
+        return;
+      }
+
+      state.applyOperation({
+        type: FlowOperationType.GRAPH_ADD_EDGE,
+        request: operation.request,
       });
     },
 
