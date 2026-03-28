@@ -2,6 +2,11 @@ import {
   createIsValidConnection,
   parsePaletteDragData,
   PALETTE_DRAG_TYPE,
+  GRAPH_DELETE_KEY_CODE,
+  GRAPH_MULTI_SELECTION_KEY,
+  GRAPH_KEYBOARD_SHORTCUTS,
+  GRAPH_SHORTCUT_IDS,
+  matchesShortcut,
   type PaletteDragData,
 } from '@activepieces/shared';
 import {
@@ -17,7 +22,7 @@ import {
   type NodeMouseHandler,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 
 import { GraphCanvasControls } from './canvas-controls';
 import {
@@ -134,6 +139,55 @@ const GraphCanvasInner = React.memo(
     );
 
     /**
+     * P2-B05: Ctrl+A (Cmd+A на macOS) — выделить все ноды и рёбра.
+     *
+     * ReactFlow не имеет встроенного Ctrl+A, поэтому реализуем через
+     * document keydown listener. Используем matchesShortcut() из shared
+     * для единообразной проверки клавиш.
+     *
+     * Вызывает onNodesChange и onEdgesChange с type='select' + selected=true
+     * для каждого элемента, что корректно обновляет ReactFlow internal state.
+     */
+    useEffect(() => {
+      const handleKeyDown = (event: KeyboardEvent) => {
+        // Игнорируем если фокус внутри input/textarea
+        if (
+          event.target instanceof HTMLInputElement ||
+          event.target instanceof HTMLTextAreaElement
+        ) {
+          return;
+        }
+
+        const selectAllShortcut = GRAPH_KEYBOARD_SHORTCUTS[GRAPH_SHORTCUT_IDS.SELECT_ALL];
+        if (matchesShortcut(event.key, event.ctrlKey || event.metaKey, event.shiftKey, selectAllShortcut)) {
+          event.preventDefault();
+          event.stopPropagation();
+
+          // Выделяем все ноды
+          onNodesChange?.(
+            nodes.map((node) => ({
+              type: 'select' as const,
+              id: node.id,
+              selected: true,
+            })),
+          );
+
+          // Выделяем все рёбра
+          onEdgesChange?.(
+            edges.map((edge) => ({
+              type: 'select' as const,
+              id: edge.id,
+              selected: true,
+            })),
+          );
+        }
+      };
+
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [nodes, edges, onNodesChange, onEdgesChange]);
+
+    /**
      * Handle drop events from the piece palette sidebar.
      *
      * Pipeline:
@@ -180,6 +234,9 @@ const GraphCanvasInner = React.memo(
           nodesDraggable={true}
           nodesConnectable={true}
           elementsSelectable={true}
+          selectionOnDrag={true}
+          deleteKeyCode={GRAPH_DELETE_KEY_CODE}
+          multiSelectionKeyCode={GRAPH_MULTI_SELECTION_KEY}
           maxZoom={1.5}
           minZoom={0.5}
           fitView={true}
@@ -217,6 +274,8 @@ GraphCanvasInner.displayName = 'GraphCanvasInner';
  * - Canvas controls: zoom in/out, fit-to-view, auto-layout button (P1-D06)
  * - Piece palette drop target: accepts HTML5 drag from sidebar (P1-E01)
  * - Context menu events: node, edge, canvas right-click handlers (P1-E02)
+ * - Keyboard shortcuts: Delete/Backspace (remove selected), Ctrl+A (select all),
+ *   Shift+click (multi-select), rectangle selection on drag (P2-B05)
  *
  * Wraps GraphCanvasInner with GraphCanvasProvider to supply
  * nodeTypes, edgeTypes, and ReactFlowProvider.
