@@ -101,6 +101,7 @@ export const flowVersionService = (log: FastifyBaseLogger) => ({
                         schemaVersion: previousVersion.schemaVersion,
                         notes: previousVersion.notes,
                         canvasLayout: previousVersion.canvasLayout ?? null,
+                        graphData: previousVersion.graphData,
                     },
                 }]
                 break

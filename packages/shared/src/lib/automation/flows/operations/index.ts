@@ -1,15 +1,15 @@
 import { z } from 'zod'
 import { Nullable } from '../../../core/common'
 import { Metadata } from '../../../core/common/metadata'
-import { BranchCondition, CodeActionSchema, CodeActionSettings, LoopOnItemsActionSchema, LoopOnItemsActionSettings, PieceActionSchema, PieceActionSettings, RouterActionSchema, RouterActionSettings } from '../actions/action'
+import { FlowActionType, BranchCondition, CodeActionSchema, CodeActionSettings, LoopOnItemsAction, LoopOnItemsActionSchema, LoopOnItemsActionSettings, PieceActionSchema, PieceActionSettings, RouterAction, RouterActionSchema, RouterActionSettings } from '../actions/action'
 import { FlowStatus } from '../flow'
 import { CanvasLayout, FlowVersion, FlowVersionState } from '../flow-version'
-import { GraphData } from '../graph-data'
+import { GraphData, type GraphEdgeDefinition, type GraphNodeDefinition } from '../graph-data'
 import { Note } from '../note'
 import { SampleDataSetting, SaveSampleDataRequest } from '../sample-data'
 import { EmptyTrigger, FlowTrigger, FlowTriggerType, PieceTrigger, PieceTriggerSettings } from '../triggers/trigger'
 import { flowPieceUtil } from '../util/flow-piece-util'
-import { flowStructureUtil } from '../util/flow-structure-util'
+import { flowStructureUtil, type Step } from '../util/flow-structure-util'
 import { _addAction } from './add-action'
 import { _addBranch } from './add-branch'
 import { _getActionsForCopy } from './copy-action-operations'
@@ -489,6 +489,13 @@ export const flowOperations = {
             default:
                 break
         }
+        // Phase 2.5: Обратная синхронизация trigger → graphData
+        // После ЛЮБОЙ операции кроме GRAPH_* обновляем graphData из trigger.
+        // GRAPH_* операции исключены — они сами являются источником для graphData,
+        // и для них работает syncTriggerFromGraphData (прямая синхронизация).
+        if (clonedVersion.graphData && !GRAPH_OPERATIONS.has(operation.type)) {
+            clonedVersion = syncGraphDataFromTrigger(clonedVersion)
+        }
         clonedVersion.valid = flowStructureUtil.getAllSteps(clonedVersion.trigger).every((step) => {
             const isSkipped = step.type != FlowTriggerType.EMPTY && step.type != FlowTriggerType.PIECE && step.skip
             return step.valid || isSkipped
@@ -496,6 +503,19 @@ export const flowOperations = {
         return clonedVersion
     },
 }
+
+/**
+ * Set операций которые модифицируют graphData напрямую.
+ * Для них обратная синхронизация trigger→graphData НЕ нужна —
+ * они сами обновляют graphData и вызывают syncTriggerFromGraphData.
+ */
+const GRAPH_OPERATIONS = new Set<FlowOperationType>([
+    FlowOperationType.GRAPH_ADD_NODE,
+    FlowOperationType.GRAPH_REMOVE_NODE,
+    FlowOperationType.GRAPH_ADD_EDGE,
+    FlowOperationType.GRAPH_REMOVE_EDGE,
+    FlowOperationType.GRAPH_MOVE_NODE,
+])
 
 /**
  * Авто-синхронизация trigger linked-list из graphData.
@@ -524,5 +544,127 @@ function syncTriggerFromGraphData(flowVersion: FlowVersion): FlowVersion {
     catch {
         // Если конвертация невозможна (например, граф невалиден) — не трогаем trigger
         return flowVersion
+    }
+}
+
+/**
+ * Phase 2.5: Обратная синхронизация trigger (linked-list) → graphData.
+ *
+ * Вызывается после КАЖДОЙ операции кроме GRAPH_*.
+ * Обновляет graphData.nodes[].settings/displayName/valid/actionType/skip
+ * из trigger linked-list, добавляет новые ноды, удаляет orphan ноды,
+ * полностью регенерирует edges из trigger structure.
+ *
+ * Гарантирует что graphData всегда актуален после UPDATE_ACTION,
+ * ADD_ACTION, DELETE_ACTION и всех остальных операций.
+ */
+function syncGraphDataFromTrigger(flowVersion: FlowVersion): FlowVersion {
+    if (!flowVersion.graphData) {
+        return flowVersion
+    }
+
+    const clonedGraphData: GraphData = JSON.parse(JSON.stringify(flowVersion.graphData))
+    const allSteps = flowStructureUtil.getAllSteps(flowVersion.trigger)
+    const stepNames = new Set(allSteps.map(s => s.name))
+
+    // 1. NODES SYNC: обновить settings существующих нод + добавить новые
+    for (const step of allSteps) {
+        const node = clonedGraphData.nodes.find(n => n.id === step.name)
+        if (node) {
+            node.settings = step.settings as Record<string, unknown>
+            node.displayName = step.displayName
+            node.valid = step.valid
+            node.actionType = step.type
+            if ('skip' in step && step.skip !== undefined) {
+                node.skip = step.skip
+            }
+        }
+        else {
+            // Новая нода (создана через legacy ADD_ACTION, не через GRAPH_ADD_NODE)
+            const newNode: GraphNodeDefinition = {
+                id: step.name,
+                type: step.name === flowVersion.trigger.name ? 'trigger' : 'action',
+                position: { x: 0, y: 0 },
+                settings: step.settings as Record<string, unknown>,
+                displayName: step.displayName,
+                valid: step.valid,
+                actionType: step.type,
+            }
+            if ('skip' in step && step.skip !== undefined) {
+                newNode.skip = step.skip
+            }
+            clonedGraphData.nodes.push(newNode)
+        }
+    }
+
+    // 2. ORPHAN REMOVAL: удалить ноды которых нет в trigger
+    clonedGraphData.nodes = clonedGraphData.nodes.filter(n => stepNames.has(n.id))
+
+    // 3. EDGES SYNC: полная регенерация из trigger structure
+    clonedGraphData.edges = traverseTriggerToEdges(flowVersion.trigger)
+
+    return { ...flowVersion, graphData: clonedGraphData }
+}
+
+/**
+ * Рекурсивный обход trigger linked-list для генерации edges.
+ * Использует тот же алгоритм что traverseStep в graph-converter.ts:
+ *   step.nextAction → edge(step, nextAction, 'output', 'input')
+ *   loop.firstLoopAction → edge(loop, firstLoopAction, 'loop-output', 'input')
+ *   router.children[i] → edge(router, children[i], 'branch-{i}', 'input')
+ */
+function traverseTriggerToEdges(trigger: FlowTrigger): GraphEdgeDefinition[] {
+    const edges: GraphEdgeDefinition[] = []
+    collectEdgesFromStep(trigger, edges)
+    return edges
+}
+
+function collectEdgesFromStep(step: Step | null | undefined, edges: GraphEdgeDefinition[]): void {
+    if (!step) return
+
+    // Loop: firstLoopAction edge
+    if (step.type === FlowActionType.LOOP_ON_ITEMS) {
+        const loopStep = step as LoopOnItemsAction
+        if (loopStep.firstLoopAction) {
+            edges.push({
+                id: `${step.name}-loop-output-${loopStep.firstLoopAction.name}`,
+                source: step.name,
+                target: loopStep.firstLoopAction.name,
+                sourceHandle: 'loop-output',
+                targetHandle: 'input',
+            })
+            collectEdgesFromStep(loopStep.firstLoopAction, edges)
+        }
+    }
+
+    // Router: branch edges
+    if (step.type === FlowActionType.ROUTER) {
+        const routerStep = step as RouterAction
+        if (routerStep.children) {
+            routerStep.children.forEach((child, index) => {
+                if (child) {
+                    edges.push({
+                        id: `${step.name}-branch-${index}-${child.name}`,
+                        source: step.name,
+                        target: child.name,
+                        sourceHandle: `branch-${index}`,
+                        targetHandle: 'input',
+                    })
+                    collectEdgesFromStep(child, edges)
+                }
+            })
+        }
+    }
+
+    // nextAction: output edge
+    if ('nextAction' in step && step.nextAction) {
+        edges.push({
+            id: `${step.name}-output-${step.nextAction.name}`,
+            source: step.name,
+            target: step.nextAction.name,
+            sourceHandle: 'output',
+            targetHandle: 'input',
+        })
+        collectEdgesFromStep(step.nextAction, edges)
     }
 }
