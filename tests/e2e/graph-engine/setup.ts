@@ -96,6 +96,9 @@ export class FlowTestClient {
     /**
      * Исполнить поток с заданным GraphData.
      * Запускает graphFlowExecutor.executeGraph() напрямую (без HTTP сервера).
+     *
+     * stepNames извлекаются из graphData.nodes для корректного resolve
+     * expression-ссылок на предыдущие шаги ({{ stepName }}).
      */
     async executeFlow(graphData: GraphData, triggerPayload?: unknown): Promise<FlowExecutionResult> {
         const adjacency = buildAdjacencyMap(graphData)
@@ -107,13 +110,17 @@ export class FlowTestClient {
         }
         const firstActionId = getNextNodeId(adjacency, triggerNode.id, 'output')
 
+        // Пересоздать constants с stepNames из graphData для корректного resolve expressions
+        const stepNames = graphData.nodes.map(n => n.id)
+        const constants = this.createConstantsWithStepNames(stepNames)
+
         // Запустить engine executor
         const executionState = FlowExecutorContext.empty()
         const result = await graphFlowExecutor.executeGraph({
             startNodeId: firstActionId,
             adjacency,
             executionState,
-            constants: this.constants,
+            constants,
         })
 
         // Обернуть результат
@@ -157,6 +164,34 @@ export class FlowTestClient {
             throw new Error('Нет результата исполнения. Вызовите executeFlow() сначала.')
         }
         return this.lastResult.getFlowStatus()
+    }
+
+    /**
+     * Создать EngineConstants с заданными stepNames (для resolve expressions).
+     * Все остальные параметры берутся из базовых constants.
+     */
+    private createConstantsWithStepNames(stepNames: string[]): EngineConstants {
+        return new EngineConstants({
+            platformId: this.constants.platformId,
+            timeoutInSeconds: this.constants.timeoutInSeconds,
+            flowId: this.constants.flowId,
+            flowVersionId: this.constants.flowVersionId,
+            flowVersionState: this.constants.flowVersionState,
+            flowRunId: this.constants.flowRunId,
+            publicApiUrl: this.constants.publicApiUrl,
+            internalApiUrl: this.constants.internalApiUrl,
+            retryConstants: this.constants.retryConstants,
+            engineToken: this.constants.engineToken,
+            projectId: this.constants.projectId,
+            triggerPieceName: this.constants.triggerPieceName,
+            progressUpdateType: this.constants.progressUpdateType,
+            serverHandlerId: this.constants.serverHandlerId ?? null,
+            httpRequestId: this.constants.httpRequestId ?? null,
+            resumePayload: this.constants.resumePayload,
+            runEnvironment: this.constants.runEnvironment,
+            stepNameToTest: this.constants.stepNameToTest,
+            stepNames,
+        })
     }
 
     /**
