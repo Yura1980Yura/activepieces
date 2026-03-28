@@ -7,11 +7,13 @@ import { flowStructureUtil, Step } from './flow-structure-util'
 
 /**
  * Data attached to each graph node — carries the original step.
+ * executionStatus is optional — set during run visualization (P2-D01).
  */
 export type GraphNodeData = {
     step: Step
     stepName: string
     actionType: string
+    executionStatus?: string
 }
 
 /**

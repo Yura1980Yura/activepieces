@@ -1,3 +1,8 @@
+import {
+  NodeExecutionVisualStatus,
+  NODE_EXECUTION_CSS_CLASSES,
+  NODE_EXECUTION_STATUS_ATTR,
+} from '@activepieces/shared';
 import { type NodeProps } from '@xyflow/react';
 import React from 'react';
 
@@ -13,18 +18,24 @@ import { GraphOutputHandle } from './handles';
  * - Trigger badge indicator
  * - Node body with step displayName
  * - Output handle (bottom-center) for nextAction connections
+ * - Execution status overlay (P2-D01): border color based on executionStatus
  *
  * Architecture doc section 6.3 defines:
  *   Trigger: output only (no input handle)
  */
 const GraphTriggerNode = React.memo(
   ({ data }: NodeProps & { data: GraphNodeData }) => {
-    const { step, stepName } = data;
+    const { step, stepName, executionStatus } = data;
+
+    // Execution overlay CSS class (P2-D01)
+    const visualStatus = (executionStatus as NodeExecutionVisualStatus) || NodeExecutionVisualStatus.IDLE;
+    const executionCssClass = NODE_EXECUTION_CSS_CLASSES[visualStatus] || '';
 
     return (
       <div
         data-step-name={stepName}
-        className="relative rounded-md rounded-tl-none border border-solid border-border bg-background px-3 py-2"
+        {...{ [NODE_EXECUTION_STATUS_ATTR]: visualStatus }}
+        className={`relative rounded-md rounded-tl-none border border-solid border-border bg-background px-3 py-2 transition-all duration-300 ${executionCssClass}`}
         style={{
           minWidth: 200,
           minHeight: 60,
