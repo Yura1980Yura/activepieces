@@ -210,7 +210,7 @@ const BuilderPage = () => {
             {useGraphCanvas ? (
               <div className="flex h-full w-full">
                 <ConnectedPiecePalette onPieceClick={handlePieceDrop} />
-                <div className="flex-1 h-full min-w-0">
+                <div className="flex-1 h-full min-w-0 relative">
                   <GraphCanvas
                     nodes={graphNodes}
                     edges={graphEdges}
@@ -224,6 +224,9 @@ const BuilderPage = () => {
                     onDeleteEdge={handleDeleteEdge}
                     onMoveNode={handleMoveNode}
                   />
+                  <PublishFlowReminderWidget />
+                  <RunInfoWidget />
+                  <ViewingOldVersionWidget />
                 </div>
               </div>
             ) : (
@@ -234,9 +237,13 @@ const BuilderPage = () => {
               </CursorPositionProvider>
             )}
 
-            <PublishFlowReminderWidget />
-            <RunInfoWidget />
-            <ViewingOldVersionWidget />
+            {!useGraphCanvas && (
+              <>
+                <PublishFlowReminderWidget />
+                <RunInfoWidget />
+                <ViewingOldVersionWidget />
+              </>
+            )}
 
             {!useGraphCanvas &&
               middlePanelRef.current &&
