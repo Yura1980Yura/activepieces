@@ -20,7 +20,9 @@ import {
   type Node,
   type Edge,
   type NodeMouseHandler,
-  type NodeDragHandler,
+  type OnNodeDrag,
+  type IsValidConnection,
+  type Connection,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import React, { useCallback, useEffect, useRef } from 'react';
@@ -57,7 +59,7 @@ export type GraphCanvasProps = {
   /** Callback for right-click on an edge (P1-E02) */
   onEdgeContextMenu?: (event: React.MouseEvent, edge: Edge) => void;
   /** Callback for right-click on canvas background (P1-E02) */
-  onPaneContextMenu?: (event: React.MouseEvent) => void;
+  onPaneContextMenu?: (event: React.MouseEvent | MouseEvent) => void;
   /** P2-B04: Callback для удаления ноды через контекстное меню → GRAPH_REMOVE_NODE */
   onDeleteNode?: (nodeId: string) => void;
   /** P2-B04: Callback для удаления ребра через контекстное меню → GRAPH_REMOVE_EDGE */
@@ -101,14 +103,17 @@ const GraphCanvasInner = React.memo(
      * - Trigger cannot be target
      * - Source handle valid for node type
      */
-    const isValidConnection = useCallback(
-      (connection: {
-        source: string | null;
-        target: string | null;
-        sourceHandle: string | null;
-        targetHandle: string | null;
-      }) => {
-        return createIsValidConnection(nodes, edges)(connection);
+    const isValidConnection: IsValidConnection = useCallback(
+      (connection: Edge | Connection) => {
+        return createIsValidConnection(
+          nodes as Parameters<typeof createIsValidConnection>[0],
+          edges as Parameters<typeof createIsValidConnection>[1],
+        )({
+          source: connection.source,
+          target: connection.target,
+          sourceHandle: connection.sourceHandle ?? null,
+          targetHandle: connection.targetHandle ?? null,
+        });
       },
       [nodes, edges],
     );
@@ -165,8 +170,8 @@ const GraphCanvasInner = React.memo(
       moves.clear();
     }, [onMoveNode]);
 
-    const handleNodeDragStop: NodeDragHandler = useCallback(
-      (_event, node, draggedNodes) => {
+    const handleNodeDragStop: OnNodeDrag = useCallback(
+      (_event: React.MouseEvent, node: Node, draggedNodes: Node[]) => {
         // Собираем позиции всех перемещённых нод (при multi-select draggedNodes > 1)
         const nodesToMove = draggedNodes.length > 0 ? draggedNodes : [node];
         for (const n of nodesToMove) {

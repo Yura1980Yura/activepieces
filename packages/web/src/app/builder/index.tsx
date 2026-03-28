@@ -123,7 +123,7 @@ const BuilderPage = () => {
 
   const handleNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
-      const stepName = getStepNameFromNode(node);
+      const stepName = getStepNameFromNode(node as Record<string, unknown> as Parameters<typeof getStepNameFromNode>[0]);
       if (stepName) {
         selectStepByName(stepName);
       }

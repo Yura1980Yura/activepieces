@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import { GraphData, GraphNodeDefinition, GraphEdgeDefinition } from '../graph-data'
 import { FlowVersion } from '../flow-version'
 
@@ -56,7 +57,7 @@ export function exportFlowToJson(flowVersion: FlowVersion): string | null {
 
     const exportData: FlowExportData = {
         displayName: flowVersion.displayName,
-        schemaVersion: flowVersion.schemaVersion,
+        schemaVersion: flowVersion.schemaVersion ?? null,
         graphData: {
             nodes: flowVersion.graphData.nodes.map((node) => ({
                 id: node.id,
@@ -135,7 +136,7 @@ export function validateFlowImport(json: string): FlowImportValidationResult {
     }
 
     // Валидация nodes через Zod
-    const nodes: Array<typeof GraphNodeDefinition._type> = []
+    const nodes: Array<z.infer<typeof GraphNodeDefinition>> = []
     for (let i = 0; i < graphDataObj['nodes'].length; i++) {
         const nodeResult = GraphNodeDefinition.safeParse(graphDataObj['nodes'][i])
         if (!nodeResult.success) {
@@ -145,7 +146,7 @@ export function validateFlowImport(json: string): FlowImportValidationResult {
     }
 
     // Валидация edges через Zod
-    const edges: Array<typeof GraphEdgeDefinition._type> = []
+    const edges: Array<z.infer<typeof GraphEdgeDefinition>> = []
     for (let i = 0; i < graphDataObj['edges'].length; i++) {
         const edgeResult = GraphEdgeDefinition.safeParse(graphDataObj['edges'][i])
         if (!edgeResult.success) {
