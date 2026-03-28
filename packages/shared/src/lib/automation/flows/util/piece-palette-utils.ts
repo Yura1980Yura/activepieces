@@ -1,4 +1,5 @@
 import { FlowActionType } from '../actions/action'
+import { GraphNodeDefinition } from '../graph-data'
 import { StepLocationRelativeToParent } from '../operations'
 
 /**
@@ -195,6 +196,134 @@ export function createAddActionFromDrop(
             parentStep,
             stepLocationRelativeToParent: StepLocationRelativeToParent.AFTER,
             action,
+        },
+    }
+}
+
+/**
+ * Определить GraphNodeDefinition.type по dragData.pieceType.
+ *
+ * @param pieceType - FlowActionType значение из PaletteDragData
+ * @returns 'loop' | 'router' | 'action'
+ */
+function pieceTypeToGraphNodeType(pieceType: string): GraphNodeDefinition['type'] {
+    switch (pieceType) {
+        case FlowActionType.LOOP_ON_ITEMS:
+            return 'loop'
+        case FlowActionType.ROUTER:
+            return 'router'
+        default:
+            return 'action'
+    }
+}
+
+/**
+ * Создать GraphNodeDefinition settings по pieceType из dragData.
+ *
+ * Генерирует начальные настройки аналогично createAddActionFromDrop,
+ * но для хранения в GraphNodeDefinition.settings.
+ *
+ * @param dragData - данные из палитры drag-and-drop
+ * @returns Record<string, unknown> с начальными настройками
+ */
+function buildGraphNodeSettings(dragData: PaletteDragData): Record<string, unknown> {
+    switch (dragData.pieceType) {
+        case FlowActionType.CODE:
+            return {
+                sourceCode: {
+                    code: '',
+                    packageJson: '{}',
+                },
+                input: {},
+                inputUiInfo: {},
+                errorHandlingOptions: {
+                    continueOnFailure: { value: false },
+                    retryOnFailure: { value: false },
+                },
+            }
+        case FlowActionType.LOOP_ON_ITEMS:
+            return {
+                items: '',
+                inputUiInfo: {},
+            }
+        case FlowActionType.ROUTER:
+            return {
+                branches: [
+                    {
+                        branchName: 'Branch 1',
+                        branchType: 'CONDITION',
+                        conditions: [[]],
+                    },
+                    {
+                        branchName: 'Fallback',
+                        branchType: 'FALLBACK',
+                    },
+                ],
+                executionType: 'EXECUTE_FIRST_MATCH',
+                inputUiInfo: {},
+            }
+        case FlowActionType.PIECE:
+        default:
+            return {
+                pieceName: dragData.pieceName,
+                pieceVersion: '~0.0.0',
+                pieceType: 'OFFICIAL',
+                packageType: 'REGISTRY',
+                input: {},
+                inputUiInfo: {},
+                errorHandlingOptions: {
+                    continueOnFailure: { value: false },
+                    retryOnFailure: { value: false },
+                },
+            }
+    }
+}
+
+/**
+ * Создать FlowOperationRequest типа GRAPH_ADD_NODE из данных палитры и позиции drop.
+ *
+ * Вместо legacy ADD_ACTION (linked-list), генерирует GRAPH_ADD_NODE
+ * с GraphNodeDefinition, содержащей позицию canvas из координаты drop.
+ *
+ * Нода создаётся как orphan (без рёбер). Пользователь соединяет её позже
+ * через handle-to-handle connection (GRAPH_ADD_EDGE).
+ *
+ * P2-B02: Замена ADD_ACTION на GRAPH_ADD_NODE при drop.
+ *
+ * @param dragData - Parsed palette drag data
+ * @param position - Позиция drop на canvas (flow coordinates)
+ * @returns Объект с type=GRAPH_ADD_NODE и node: GraphNodeDefinition
+ */
+export function createGraphAddNodeFromDrop(
+    dragData: PaletteDragData,
+    position: { x: number; y: number },
+): {
+    type: 'GRAPH_ADD_NODE'
+    request: {
+        node: GraphNodeDefinition
+    }
+} {
+    const nodeId = `step_${Date.now()}`
+    const nodeType = pieceTypeToGraphNodeType(dragData.pieceType)
+    const settings = buildGraphNodeSettings(dragData)
+    const actionType = dragData.pieceType === FlowActionType.PIECE || dragData.pieceType === FlowActionType.CODE || dragData.pieceType === FlowActionType.LOOP_ON_ITEMS || dragData.pieceType === FlowActionType.ROUTER
+        ? dragData.pieceType
+        : FlowActionType.PIECE
+
+    const node: GraphNodeDefinition = {
+        id: nodeId,
+        type: nodeType,
+        position: { x: position.x, y: position.y },
+        displayName: dragData.displayName,
+        valid: false,
+        actionType,
+        settings,
+    }
+
+    return {
+        type: 'GRAPH_ADD_NODE',
+        request: {
+            node,
         },
     }
 }

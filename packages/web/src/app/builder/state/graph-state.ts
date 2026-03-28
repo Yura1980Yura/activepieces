@@ -46,6 +46,10 @@ const STRUCTURAL_OPERATIONS = new Set<FlowOperationType>([
   FlowOperationType.IMPORT_FLOW,
   FlowOperationType.UPDATE_TRIGGER,
   FlowOperationType.SET_SKIP_ACTION,
+  FlowOperationType.GRAPH_ADD_NODE,
+  FlowOperationType.GRAPH_REMOVE_NODE,
+  FlowOperationType.GRAPH_ADD_EDGE,
+  FlowOperationType.GRAPH_REMOVE_EDGE,
 ]);
 
 /**

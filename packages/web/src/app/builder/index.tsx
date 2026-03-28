@@ -1,12 +1,15 @@
 import {
   FlowAction,
   FlowActionType,
+  FlowOperationType,
   FlowTrigger,
   FlowTriggerType,
   FlowVersionState,
   flowStructureUtil,
   getStepNameFromNode,
   getUseGraphCanvas,
+  createGraphAddNodeFromDrop,
+  type PaletteDragData,
 } from '@activepieces/shared';
 import { type Node } from '@xyflow/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -64,6 +67,7 @@ const BuilderPage = () => {
     onGraphEdgesChange,
     onGraphConnect,
     autoLayoutGraph,
+    applyOperation,
   ] = useBuilderStateContext((state) => [
     state.flowVersion,
     state.rightSidebar,
@@ -80,6 +84,7 @@ const BuilderPage = () => {
     state.onGraphEdgesChange,
     state.onGraphConnect,
     state.autoLayoutGraph,
+    state.applyOperation,
   ]);
   useEffect(() => {
     return () => {
@@ -123,6 +128,24 @@ const BuilderPage = () => {
     [selectStepByName],
   );
 
+  /**
+   * Handle piece drop from palette sidebar onto graph canvas.
+   *
+   * P2-B02: Uses GRAPH_ADD_NODE instead of legacy ADD_ACTION.
+   * Creates an orphan node at the drop position. User connects it
+   * via handle-to-handle edge creation (GRAPH_ADD_EDGE).
+   */
+  const handlePieceDrop = useCallback(
+    (dragData: PaletteDragData, position: { x: number; y: number }) => {
+      const operation = createGraphAddNodeFromDrop(dragData, position);
+      applyOperation({
+        type: FlowOperationType.GRAPH_ADD_NODE,
+        request: operation.request,
+      });
+    },
+    [applyOperation],
+  );
+
   return (
     <div className="flex h-full w-full flex-col relative max-h-[100vh]">
       <div className="z-40">
@@ -143,6 +166,7 @@ const BuilderPage = () => {
                     onConnect={onGraphConnect}
                     onNodeClick={handleNodeClick}
                     onAutoLayout={autoLayoutGraph}
+                    onPieceDrop={handlePieceDrop}
                   />
                 </div>
               </div>

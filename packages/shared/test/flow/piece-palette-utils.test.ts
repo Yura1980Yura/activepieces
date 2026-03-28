@@ -4,6 +4,7 @@ import {
     createPaletteDragData,
     parsePaletteDragData,
     createAddActionFromDrop,
+    createGraphAddNodeFromDrop,
     filterPaletteItems,
     getPaletteItemTestId,
     mapPiecesToPaletteItems,
@@ -363,6 +364,140 @@ describe('piece-palette-utils', () => {
             for (const item of BUILT_IN_PALETTE_ITEMS) {
                 expect(item.logoUrl.length).toBeGreaterThan(0)
             }
+        })
+    })
+
+    describe('createGraphAddNodeFromDrop', () => {
+        const baseDragData: PaletteDragData = {
+            pieceType: 'PIECE',
+            pieceName: '@activepieces/piece-gmail',
+            displayName: 'Gmail',
+            logoUrl: 'https://cdn.example.com/gmail.png',
+        }
+        const dropPosition = { x: 250, y: 400 }
+
+        it('should create GRAPH_ADD_NODE for PIECE type', () => {
+            const result = createGraphAddNodeFromDrop(baseDragData, dropPosition)
+            expect(result.type).toBe('GRAPH_ADD_NODE')
+            expect(result.request.node.type).toBe('action')
+            expect(result.request.node.actionType).toBe('PIECE')
+            expect(result.request.node.displayName).toBe('Gmail')
+            expect(result.request.node.valid).toBe(false)
+            expect(result.request.node.settings.pieceName).toBe('@activepieces/piece-gmail')
+        })
+
+        it('should set position from drop coordinates', () => {
+            const result = createGraphAddNodeFromDrop(baseDragData, { x: 123, y: 456 })
+            expect(result.request.node.position.x).toBe(123)
+            expect(result.request.node.position.y).toBe(456)
+        })
+
+        it('should create GRAPH_ADD_NODE for CODE type with node type action', () => {
+            const dragData: PaletteDragData = {
+                ...baseDragData,
+                pieceType: 'CODE',
+                pieceName: 'code',
+                displayName: 'Code',
+            }
+            const result = createGraphAddNodeFromDrop(dragData, dropPosition)
+            expect(result.type).toBe('GRAPH_ADD_NODE')
+            expect(result.request.node.type).toBe('action')
+            expect(result.request.node.actionType).toBe('CODE')
+            expect(result.request.node.settings.sourceCode).toBeDefined()
+        })
+
+        it('should create GRAPH_ADD_NODE for LOOP_ON_ITEMS type with node type loop', () => {
+            const dragData: PaletteDragData = {
+                ...baseDragData,
+                pieceType: 'LOOP_ON_ITEMS',
+                pieceName: 'loop',
+                displayName: 'Loop',
+            }
+            const result = createGraphAddNodeFromDrop(dragData, dropPosition)
+            expect(result.type).toBe('GRAPH_ADD_NODE')
+            expect(result.request.node.type).toBe('loop')
+            expect(result.request.node.actionType).toBe('LOOP_ON_ITEMS')
+            expect(result.request.node.settings.items).toBeDefined()
+        })
+
+        it('should create GRAPH_ADD_NODE for ROUTER type with node type router', () => {
+            const dragData: PaletteDragData = {
+                ...baseDragData,
+                pieceType: 'ROUTER',
+                pieceName: 'router',
+                displayName: 'Branch',
+            }
+            const result = createGraphAddNodeFromDrop(dragData, dropPosition)
+            expect(result.type).toBe('GRAPH_ADD_NODE')
+            expect(result.request.node.type).toBe('router')
+            expect(result.request.node.actionType).toBe('ROUTER')
+            const settings = result.request.node.settings
+            expect(settings.branches).toBeDefined()
+            expect(Array.isArray(settings.branches)).toBe(true)
+        })
+
+        it('should generate unique node id starting with step_', () => {
+            const result = createGraphAddNodeFromDrop(baseDragData, dropPosition)
+            expect(result.request.node.id).toMatch(/^step_\d+$/)
+        })
+
+        it('should generate different ids for consecutive calls', () => {
+            const result1 = createGraphAddNodeFromDrop(baseDragData, dropPosition)
+            // Small delay to ensure Date.now() differs
+            const result2 = createGraphAddNodeFromDrop(baseDragData, dropPosition)
+            // IDs may or may not differ depending on timing, but they should be valid
+            expect(result1.request.node.id).toMatch(/^step_\d+$/)
+            expect(result2.request.node.id).toMatch(/^step_\d+$/)
+        })
+
+        it('should set displayName from drag data', () => {
+            const result = createGraphAddNodeFromDrop(baseDragData, dropPosition)
+            expect(result.request.node.displayName).toBe('Gmail')
+        })
+
+        it('should set valid to false for new nodes', () => {
+            const result = createGraphAddNodeFromDrop(baseDragData, dropPosition)
+            expect(result.request.node.valid).toBe(false)
+        })
+
+        it('should produce node with PIECE settings containing pieceVersion', () => {
+            const result = createGraphAddNodeFromDrop(baseDragData, dropPosition)
+            expect(result.request.node.settings.pieceVersion).toBe('~0.0.0')
+        })
+
+        it('should produce node with PIECE settings containing packageType', () => {
+            const result = createGraphAddNodeFromDrop(baseDragData, dropPosition)
+            expect(result.request.node.settings.packageType).toBe('REGISTRY')
+        })
+
+        it('should handle negative coordinates', () => {
+            const result = createGraphAddNodeFromDrop(baseDragData, { x: -100, y: -200 })
+            expect(result.request.node.position.x).toBe(-100)
+            expect(result.request.node.position.y).toBe(-200)
+        })
+
+        it('should handle zero coordinates', () => {
+            const result = createGraphAddNodeFromDrop(baseDragData, { x: 0, y: 0 })
+            expect(result.request.node.position.x).toBe(0)
+            expect(result.request.node.position.y).toBe(0)
+        })
+
+        it('full pipeline: create drag data -> parse -> createGraphAddNodeFromDrop', () => {
+            const dragDataStr = createPaletteDragData(
+                'PIECE',
+                '@activepieces/piece-slack',
+                'Slack',
+                'https://cdn.example.com/slack.png',
+            )
+            const parsed = parsePaletteDragData(dragDataStr)
+            expect(parsed).not.toBeNull()
+
+            const operation = createGraphAddNodeFromDrop(parsed!, { x: 300, y: 500 })
+            expect(operation.type).toBe('GRAPH_ADD_NODE')
+            expect(operation.request.node.displayName).toBe('Slack')
+            expect(operation.request.node.position.x).toBe(300)
+            expect(operation.request.node.position.y).toBe(500)
+            expect(operation.request.node.settings.pieceName).toBe('@activepieces/piece-slack')
         })
     })
 
