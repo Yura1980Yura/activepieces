@@ -6,10 +6,10 @@ import {
   syncGraphFromFlowVersion,
   syncGraphToFlowVersion,
   autoLayoutGraphNodes,
-  removeGraphNodes,
-  removeGraphEdges,
   createIsValidConnection,
   createGraphAddEdgeFromConnection,
+  createGraphRemoveNodeOperation,
+  createGraphRemoveEdgeOperation,
   type GraphNode,
   type ClassifiedGraphEdge,
 } from '@activepieces/shared';
@@ -221,23 +221,25 @@ export const createGraphState = (
     },
 
     deleteSelectedGraphNodes: (nodeIds: string[]) => {
-      set((state) => {
-        const result = removeGraphNodes(
-          state.graphNodes,
-          state.graphEdges,
-          nodeIds,
-        );
-        return {
-          graphNodes: result.nodes,
-          graphEdges: result.edges,
-        };
-      });
+      const state = get();
+      for (const nodeId of nodeIds) {
+        const operation = createGraphRemoveNodeOperation(nodeId);
+        state.applyOperation({
+          type: FlowOperationType.GRAPH_REMOVE_NODE,
+          request: operation.request,
+        });
+      }
     },
 
     deleteSelectedGraphEdges: (edgeIds: string[]) => {
-      set((state) => ({
-        graphEdges: removeGraphEdges(state.graphEdges, edgeIds),
-      }));
+      const state = get();
+      for (const edgeId of edgeIds) {
+        const operation = createGraphRemoveEdgeOperation(edgeId);
+        state.applyOperation({
+          type: FlowOperationType.GRAPH_REMOVE_EDGE,
+          request: operation.request,
+        });
+      }
     },
   };
 };

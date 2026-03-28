@@ -14,6 +14,8 @@ import {
     buildGraphFromFlowVersion,
     createIsValidConnection,
     createGraphAddEdgeFromConnection,
+    createGraphRemoveNodeOperation,
+    createGraphRemoveEdgeOperation,
     GRAPH_NODE_TYPE_KEYS,
     CANVAS_CONTROL_ACTIONS,
     getCanvasControlActions,
@@ -673,5 +675,111 @@ describe('createGraphAddEdgeFromConnection', () => {
         expect(result).not.toBeNull()
         expect(result!.request.edge.source).toBe('step_1')
         expect(result!.request.edge.target).toBe('step_1')
+    })
+})
+
+// === createGraphRemoveNodeOperation (P2-B04) ===
+
+describe('createGraphRemoveNodeOperation', () => {
+    it('должен создать GRAPH_REMOVE_NODE операцию с корректным nodeId', () => {
+        const result = createGraphRemoveNodeOperation('step_1')
+
+        expect(result.type).toBe('GRAPH_REMOVE_NODE')
+        expect(result.request.nodeId).toBe('step_1')
+    })
+
+    it('должен создать операцию для trigger node', () => {
+        const result = createGraphRemoveNodeOperation('trigger')
+
+        expect(result.type).toBe('GRAPH_REMOVE_NODE')
+        expect(result.request.nodeId).toBe('trigger')
+    })
+
+    it('должен создать операцию для node с произвольным именем', () => {
+        const result = createGraphRemoveNodeOperation('loop_action_123')
+
+        expect(result.type).toBe('GRAPH_REMOVE_NODE')
+        expect(result.request.nodeId).toBe('loop_action_123')
+    })
+
+    it('должен содержать ровно type и request поля', () => {
+        const result = createGraphRemoveNodeOperation('step_1')
+
+        expect(Object.keys(result).sort()).toEqual(['request', 'type'])
+        expect(Object.keys(result.request)).toEqual(['nodeId'])
+    })
+
+    it('должен возвращать новый объект при каждом вызове', () => {
+        const result1 = createGraphRemoveNodeOperation('step_1')
+        const result2 = createGraphRemoveNodeOperation('step_1')
+
+        expect(result1).not.toBe(result2)
+        expect(result1.request).not.toBe(result2.request)
+        expect(result1).toEqual(result2)
+    })
+
+    it('должен сохранять пустую строку как nodeId', () => {
+        const result = createGraphRemoveNodeOperation('')
+
+        expect(result.request.nodeId).toBe('')
+    })
+
+    it('должен сохранять спецсимволы в nodeId', () => {
+        const result = createGraphRemoveNodeOperation('step-with-dashes_and_underscores')
+
+        expect(result.request.nodeId).toBe('step-with-dashes_and_underscores')
+    })
+})
+
+// === createGraphRemoveEdgeOperation (P2-B04) ===
+
+describe('createGraphRemoveEdgeOperation', () => {
+    it('должен создать GRAPH_REMOVE_EDGE операцию с корректным edgeId', () => {
+        const result = createGraphRemoveEdgeOperation('trigger-output-step_1')
+
+        expect(result.type).toBe('GRAPH_REMOVE_EDGE')
+        expect(result.request.edgeId).toBe('trigger-output-step_1')
+    })
+
+    it('должен создать операцию для loop edge', () => {
+        const result = createGraphRemoveEdgeOperation('loop_1-loop-output-child_step')
+
+        expect(result.type).toBe('GRAPH_REMOVE_EDGE')
+        expect(result.request.edgeId).toBe('loop_1-loop-output-child_step')
+    })
+
+    it('должен создать операцию для branch edge', () => {
+        const result = createGraphRemoveEdgeOperation('router_1-branch-0-step_3')
+
+        expect(result.type).toBe('GRAPH_REMOVE_EDGE')
+        expect(result.request.edgeId).toBe('router_1-branch-0-step_3')
+    })
+
+    it('должен содержать ровно type и request поля', () => {
+        const result = createGraphRemoveEdgeOperation('edge-1')
+
+        expect(Object.keys(result).sort()).toEqual(['request', 'type'])
+        expect(Object.keys(result.request)).toEqual(['edgeId'])
+    })
+
+    it('должен возвращать новый объект при каждом вызове', () => {
+        const result1 = createGraphRemoveEdgeOperation('edge-1')
+        const result2 = createGraphRemoveEdgeOperation('edge-1')
+
+        expect(result1).not.toBe(result2)
+        expect(result1.request).not.toBe(result2.request)
+        expect(result1).toEqual(result2)
+    })
+
+    it('должен сохранять пустую строку как edgeId', () => {
+        const result = createGraphRemoveEdgeOperation('')
+
+        expect(result.request.edgeId).toBe('')
+    })
+
+    it('должен сохранять произвольный формат ID', () => {
+        const result = createGraphRemoveEdgeOperation('custom-edge-id-format')
+
+        expect(result.request.edgeId).toBe('custom-edge-id-format')
     })
 })

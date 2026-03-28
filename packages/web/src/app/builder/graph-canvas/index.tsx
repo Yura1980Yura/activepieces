@@ -52,6 +52,10 @@ export type GraphCanvasProps = {
   onEdgeContextMenu?: (event: React.MouseEvent, edge: Edge) => void;
   /** Callback for right-click on canvas background (P1-E02) */
   onPaneContextMenu?: (event: React.MouseEvent) => void;
+  /** P2-B04: Callback для удаления ноды через контекстное меню → GRAPH_REMOVE_NODE */
+  onDeleteNode?: (nodeId: string) => void;
+  /** P2-B04: Callback для удаления ребра через контекстное меню → GRAPH_REMOVE_EDGE */
+  onDeleteEdge?: (edgeId: string) => void;
 };
 
 /**
@@ -71,6 +75,8 @@ const GraphCanvasInner = React.memo(
     onNodeContextMenu,
     onEdgeContextMenu,
     onPaneContextMenu,
+    onDeleteNode,
+    onDeleteEdge,
   }: GraphCanvasProps) => {
     const { nodeTypes, edgeTypes } = useGraphCanvasContext();
     const reactFlowInstance = useReactFlow();
@@ -106,6 +112,26 @@ const GraphCanvasInner = React.memo(
       event.preventDefault();
       event.dataTransfer.dropEffect = 'move';
     }, []);
+
+    /**
+     * P2-B04: Handle ReactFlow delete events (Delete key, Backspace).
+     *
+     * Intercepts ReactFlow's built-in delete mechanism and dispatches
+     * through GRAPH_REMOVE_NODE / GRAPH_REMOVE_EDGE operations instead
+     * of directly mutating local state. This ensures the flow pipeline
+     * (syncTriggerFromGraphData, operation listeners) processes removals.
+     */
+    const handleDelete = useCallback(
+      ({ nodes: deletedNodes, edges: deletedEdges }: { nodes: Node[]; edges: Edge[] }) => {
+        for (const node of deletedNodes) {
+          onDeleteNode?.(node.id);
+        }
+        for (const edge of deletedEdges) {
+          onDeleteEdge?.(edge.id);
+        }
+      },
+      [onDeleteNode, onDeleteEdge],
+    );
 
     /**
      * Handle drop events from the piece palette sidebar.
@@ -147,6 +173,7 @@ const GraphCanvasInner = React.memo(
           onNodeContextMenu={onNodeContextMenu}
           onEdgeContextMenu={onEdgeContextMenu}
           onPaneContextMenu={onPaneContextMenu}
+          onDelete={handleDelete}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
           isValidConnection={isValidConnection}

@@ -261,3 +261,59 @@ export function createGraphAddEdgeFromConnection(
         },
     }
 }
+
+/**
+ * Создать FlowOperationRequest типа GRAPH_REMOVE_NODE для удаления ноды из графа.
+ *
+ * Чистая функция маппинга: конвертирует nodeId в формат GRAPH_REMOVE_NODE request.
+ * Используется контекстным меню ноды (правый клик → Delete) и клавиатурным
+ * shortcut Delete для dispatch через applyOperation.
+ *
+ * P2-B04: Замена прямого removeGraphNodes на GRAPH_REMOVE_NODE операцию.
+ *
+ * @param nodeId - ID ноды для удаления
+ * @returns Объект с type=GRAPH_REMOVE_NODE и request: { nodeId }
+ */
+export function createGraphRemoveNodeOperation(
+    nodeId: string,
+): {
+    type: 'GRAPH_REMOVE_NODE'
+    request: {
+        nodeId: string
+    }
+} {
+    return {
+        type: 'GRAPH_REMOVE_NODE',
+        request: {
+            nodeId,
+        },
+    }
+}
+
+/**
+ * Создать FlowOperationRequest типа GRAPH_REMOVE_EDGE для удаления ребра из графа.
+ *
+ * Чистая функция маппинга: конвертирует edgeId в формат GRAPH_REMOVE_EDGE request.
+ * Используется контекстным меню ребра (правый клик → Delete) для dispatch
+ * через applyOperation.
+ *
+ * P2-B04: Замена прямого removeGraphEdges на GRAPH_REMOVE_EDGE операцию.
+ *
+ * @param edgeId - ID ребра для удаления
+ * @returns Объект с type=GRAPH_REMOVE_EDGE и request: { edgeId }
+ */
+export function createGraphRemoveEdgeOperation(
+    edgeId: string,
+): {
+    type: 'GRAPH_REMOVE_EDGE'
+    request: {
+        edgeId: string
+    }
+} {
+    return {
+        type: 'GRAPH_REMOVE_EDGE',
+        request: {
+            edgeId,
+        },
+    }
+}

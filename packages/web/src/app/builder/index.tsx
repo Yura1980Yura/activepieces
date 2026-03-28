@@ -9,6 +9,8 @@ import {
   getStepNameFromNode,
   getUseGraphCanvas,
   createGraphAddNodeFromDrop,
+  createGraphRemoveNodeOperation,
+  createGraphRemoveEdgeOperation,
   type PaletteDragData,
 } from '@activepieces/shared';
 import { type Node } from '@xyflow/react';
@@ -146,6 +148,39 @@ const BuilderPage = () => {
     [applyOperation],
   );
 
+  /**
+   * P2-B04: Удалить ноду через GRAPH_REMOVE_NODE.
+   *
+   * Используется контекстным меню (правый клик → Delete) и Delete-клавишей.
+   * Заменяет legacy DELETE_ACTION для graph canvas режима.
+   */
+  const handleDeleteNode = useCallback(
+    (nodeId: string) => {
+      const operation = createGraphRemoveNodeOperation(nodeId);
+      applyOperation({
+        type: FlowOperationType.GRAPH_REMOVE_NODE,
+        request: operation.request,
+      });
+    },
+    [applyOperation],
+  );
+
+  /**
+   * P2-B04: Удалить ребро через GRAPH_REMOVE_EDGE.
+   *
+   * Используется контекстным меню ребра (правый клик → Delete) и Delete-клавишей.
+   */
+  const handleDeleteEdge = useCallback(
+    (edgeId: string) => {
+      const operation = createGraphRemoveEdgeOperation(edgeId);
+      applyOperation({
+        type: FlowOperationType.GRAPH_REMOVE_EDGE,
+        request: operation.request,
+      });
+    },
+    [applyOperation],
+  );
+
   return (
     <div className="flex h-full w-full flex-col relative max-h-[100vh]">
       <div className="z-40">
@@ -167,6 +202,8 @@ const BuilderPage = () => {
                     onNodeClick={handleNodeClick}
                     onAutoLayout={autoLayoutGraph}
                     onPieceDrop={handlePieceDrop}
+                    onDeleteNode={handleDeleteNode}
+                    onDeleteEdge={handleDeleteEdge}
                   />
                 </div>
               </div>
