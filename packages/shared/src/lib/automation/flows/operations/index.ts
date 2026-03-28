@@ -19,6 +19,7 @@ import { _importFlow } from './import-flow'
 import { _moveAction } from './move-action'
 import { _moveBranch } from './move-branch'
 import { graphOperations, GraphAddNodeRequest, GraphRemoveNodeRequest, GraphAddEdgeRequest, GraphRemoveEdgeRequest, GraphMoveNodeRequest } from './graph-operations'
+import { graphDataToLinkedList } from '../util/graph-converter'
 import { notesOperations } from './notes-operations'
 import { _getOperationsForPaste } from './paste-operations'
 import { _skipAction } from './skip-action'
@@ -460,18 +461,22 @@ export const flowOperations = {
             }
             case FlowOperationType.GRAPH_ADD_NODE: {
                 clonedVersion = graphOperations.addNode(clonedVersion, operation.request)
+                clonedVersion = syncTriggerFromGraphData(clonedVersion)
                 break
             }
             case FlowOperationType.GRAPH_REMOVE_NODE: {
                 clonedVersion = graphOperations.removeNode(clonedVersion, operation.request)
+                clonedVersion = syncTriggerFromGraphData(clonedVersion)
                 break
             }
             case FlowOperationType.GRAPH_ADD_EDGE: {
                 clonedVersion = graphOperations.addEdge(clonedVersion, operation.request)
+                clonedVersion = syncTriggerFromGraphData(clonedVersion)
                 break
             }
             case FlowOperationType.GRAPH_REMOVE_EDGE: {
                 clonedVersion = graphOperations.removeEdge(clonedVersion, operation.request)
+                clonedVersion = syncTriggerFromGraphData(clonedVersion)
                 break
             }
             case FlowOperationType.GRAPH_MOVE_NODE: {
@@ -488,4 +493,34 @@ export const flowOperations = {
         })
         return clonedVersion
     },
+}
+
+/**
+ * Авто-синхронизация trigger linked-list из graphData.
+ *
+ * При GRAPH_* операциях (кроме GRAPH_MOVE_NODE) graphData является источником
+ * истины. Если graphData содержит trigger node, автоматически регенерируем
+ * trigger linked-list chain для backward compatibility с API consumers.
+ *
+ * Если trigger node не найден в graphData — trigger не трогаем.
+ */
+function syncTriggerFromGraphData(flowVersion: FlowVersion): FlowVersion {
+    if (!flowVersion.graphData) {
+        return flowVersion
+    }
+    const hasTriggerNode = flowVersion.graphData.nodes.some(n => n.type === 'trigger')
+    if (!hasTriggerNode) {
+        return flowVersion
+    }
+    try {
+        const trigger = graphDataToLinkedList(flowVersion.graphData)
+        return {
+            ...flowVersion,
+            trigger,
+        }
+    }
+    catch {
+        // Если конвертация невозможна (например, граф невалиден) — не трогаем trigger
+        return flowVersion
+    }
 }

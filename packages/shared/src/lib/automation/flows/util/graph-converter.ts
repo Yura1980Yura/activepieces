@@ -1,5 +1,6 @@
-import { FlowAction, FlowActionType, LoopOnItemsAction, RouterAction } from '../actions/action'
+import { FlowAction, FlowActionType, LoopOnItemsAction, RouterAction, RouterActionSettings } from '../actions/action'
 import { CanvasLayout, FlowVersion } from '../flow-version'
+import { GraphData, GraphEdgeDefinition, GraphNodeDefinition } from '../graph-data'
 import { FlowTrigger, FlowTriggerType } from '../triggers/trigger'
 import { computeAutoLayout } from './auto-layout'
 import { flowStructureUtil, Step } from './flow-structure-util'
@@ -300,6 +301,151 @@ export function extractPositions(nodes: GraphNode[]): Record<string, { x: number
         positions[node.id] = { x: node.position.x, y: node.position.y }
     }
     return positions
+}
+
+// === graphDataToLinkedList: хранимый формат GraphData → FlowTrigger linked-list ===
+
+/**
+ * Восстановить FlowAction из GraphNodeDefinition, рекурсивно присоединяя
+ * nextAction, firstLoopAction или children на основе edges.
+ */
+function rebuildStepFromDefinition(
+    nodeId: string,
+    nodeMap: Map<string, GraphNodeDefinition>,
+    edgesBySource: Map<string, GraphEdgeDefinition[]>,
+    visited: Set<string>,
+): FlowAction | undefined {
+    if (visited.has(nodeId)) return undefined
+    const node = nodeMap.get(nodeId)
+    if (!node) return undefined
+
+    visited.add(nodeId)
+
+    const outEdges = edgesBySource.get(nodeId) || []
+
+    // Найти nextAction (output handle)
+    const outputEdge = outEdges.find(e => e.sourceHandle === 'output')
+    const nextAction = outputEdge
+        ? rebuildStepFromDefinition(outputEdge.target, nodeMap, edgesBySource, visited)
+        : undefined
+
+    // Базовые свойства шага, восстановленные из GraphNodeDefinition
+    const baseStep = {
+        name: node.id,
+        type: node.actionType as FlowActionType,
+        valid: node.valid,
+        displayName: node.displayName,
+        lastUpdatedDate: new Date().toISOString(),
+        skip: node.skip,
+        settings: node.settings as Record<string, unknown>,
+    }
+
+    if (node.actionType === FlowActionType.LOOP_ON_ITEMS) {
+        const loopOutputEdge = outEdges.find(e => e.sourceHandle === 'loop-output')
+        const firstLoopAction = loopOutputEdge
+            ? rebuildStepFromDefinition(loopOutputEdge.target, nodeMap, edgesBySource, visited)
+            : undefined
+
+        return {
+            ...baseStep,
+            nextAction,
+            firstLoopAction,
+        } as FlowAction
+    }
+
+    if (node.actionType === FlowActionType.ROUTER) {
+        const branchEdges = outEdges
+            .filter(e => e.sourceHandle.startsWith('branch-'))
+            .sort((a, b) => {
+                const aIdx = parseInt(a.sourceHandle.replace('branch-', ''), 10)
+                const bIdx = parseInt(b.sourceHandle.replace('branch-', ''), 10)
+                return aIdx - bIdx
+            })
+
+        // Число веток определяется из settings.branches
+        const settings = node.settings as unknown as RouterActionSettings
+        const branchCount = settings.branches?.length ?? 0
+        const children: (FlowAction | null)[] = new Array(branchCount).fill(null)
+
+        for (const edge of branchEdges) {
+            const branchIndex = parseInt(edge.sourceHandle.replace('branch-', ''), 10)
+            if (branchIndex >= 0 && branchIndex < branchCount) {
+                const child = rebuildStepFromDefinition(edge.target, nodeMap, edgesBySource, visited)
+                children[branchIndex] = child ?? null
+            }
+        }
+
+        return {
+            ...baseStep,
+            nextAction,
+            children,
+        } as FlowAction
+    }
+
+    // Code или Piece action
+    return {
+        ...baseStep,
+        nextAction,
+    } as FlowAction
+}
+
+/**
+ * Конвертация хранимого формата GraphData (GraphNodeDefinition[] + GraphEdgeDefinition[])
+ * обратно в FlowTrigger linked-list chain для backward compatibility.
+ *
+ * Алгоритм:
+ * 1. Найти trigger node (type === 'trigger')
+ * 2. Пройти по edges от trigger, восстановить nextAction chain
+ * 3. Для loop нод: восстановить firstLoopAction из 'loop-output' edges
+ * 4. Для router нод: восстановить children[N] из 'branch-N' edges
+ *
+ * Используется серверным слоем при сохранении graphData для автоматической
+ * генерации trigger linked-list (deprecated поле для API consumers).
+ */
+export function graphDataToLinkedList(graphData: GraphData): FlowTrigger {
+    const { nodes, edges } = graphData
+
+    const nodeMap = new Map<string, GraphNodeDefinition>()
+    for (const node of nodes) {
+        nodeMap.set(node.id, node)
+    }
+
+    const edgesBySource = new Map<string, GraphEdgeDefinition[]>()
+    for (const edge of edges) {
+        const existing = edgesBySource.get(edge.source) || []
+        existing.push(edge)
+        edgesBySource.set(edge.source, existing)
+    }
+
+    // Найти trigger node
+    const triggerNode = nodes.find(n => n.type === 'trigger')
+    if (!triggerNode) {
+        throw new Error('Trigger node не найден в graphData')
+    }
+
+    const visited = new Set<string>()
+    visited.add(triggerNode.id)
+
+    const outEdges = edgesBySource.get(triggerNode.id) || []
+    const outputEdge = outEdges.find(e => e.sourceHandle === 'output')
+
+    const nextAction = outputEdge
+        ? rebuildStepFromDefinition(outputEdge.target, nodeMap, edgesBySource, visited)
+        : undefined
+
+    // Восстановить trigger из GraphNodeDefinition
+    const triggerType = triggerNode.actionType as FlowTriggerType
+    const trigger: FlowTrigger = {
+        name: triggerNode.id,
+        type: triggerType,
+        valid: triggerNode.valid,
+        displayName: triggerNode.displayName,
+        lastUpdatedDate: new Date().toISOString(),
+        settings: triggerNode.settings as Record<string, unknown>,
+        nextAction,
+    } as FlowTrigger
+
+    return trigger
 }
 
 /**
