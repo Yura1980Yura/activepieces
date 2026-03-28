@@ -223,7 +223,7 @@ describe('graphFlowExecutor', () => {
             expect(result.steps.echo_step).toBeUndefined()
         })
 
-        it('должен бросить ошибку для LOOP_ON_ITEMS типа', async () => {
+        it('должен исполнить LOOP_ON_ITEMS ноду (базовая проверка wiring)', async () => {
             const graphData: GraphData = {
                 nodes: [
                     {
@@ -252,12 +252,17 @@ describe('graphFlowExecutor', () => {
 
             const { adjacency } = buildAdjacencyForTest(graphData)
 
-            await expect(graphFlowExecutor.executeGraph({
+            const result = await graphFlowExecutor.executeGraph({
                 startNodeId: 'loop_step',
                 adjacency,
                 executionState: FlowExecutorContext.empty(),
                 constants: generateMockEngineConstants(),
-            })).rejects.toThrow('Loop executor not implemented in graph executor yet')
+            })
+
+            // Loop без тела (нет loop-output edge) — должен пройти 3 итерации без ошибок
+            expect(result.verdict.status).toBe(FlowRunStatus.RUNNING)
+            expect(result.steps.loop_step).toBeDefined()
+            expect(result.steps.loop_step.type).toBe(FlowActionType.LOOP_ON_ITEMS)
         })
 
         it('должен бросить ошибку для ROUTER типа', async () => {

@@ -24,6 +24,7 @@ import { BaseExecutor } from './base-executor'
 import { codeExecutor } from './code-executor'
 import { EngineConstants } from './context/engine-constants'
 import { FlowExecutorContext } from './context/flow-execution-context'
+import { graphLoopExecutor } from './graph-loop-executor'
 import { pieceExecutor } from './piece-executor'
 
 /**
@@ -34,7 +35,8 @@ import { pieceExecutor } from './piece-executor'
 
 /**
  * Получить executor для данного типа действия.
- * LOOP_ON_ITEMS и ROUTER — throw NotImplementedYet (будут в P2-A05/A06).
+ * LOOP_ON_ITEMS обрабатывается отдельно в executeGraph (нужен adjacencyMap).
+ * ROUTER — throw NotImplementedYet (будет в P2-A06).
  */
 function getGraphExecutorForAction(actionType: string): BaseExecutor<FlowAction> {
     switch (actionType) {
@@ -43,9 +45,11 @@ function getGraphExecutorForAction(actionType: string): BaseExecutor<FlowAction>
         case FlowActionType.PIECE:
             return pieceExecutor
         case FlowActionType.LOOP_ON_ITEMS:
+            // Обрабатывается в executeGraph через graphLoopExecutor.handle()
+            // Этот путь не должен вызываться, но на случай ошибки — throw
             throw new EngineGenericError(
-                'GraphLoopNotImplementedError',
-                'Loop executor not implemented in graph executor yet (planned for P2-A05)',
+                'GraphLoopDirectCallError',
+                'LOOP_ON_ITEMS must be handled via graphLoopExecutor with adjacencyMap, not via getGraphExecutorForAction',
             )
         case FlowActionType.ROUTER:
             throw new EngineGenericError(
@@ -204,14 +208,25 @@ export const graphFlowExecutor = {
             }
 
             // Получить executor и исполнить ноду
-            const handler = getGraphExecutorForAction(node.actionType)
             const action = nodeToFlowAction(node)
 
-            flowExecutionContext = await handler.handle({
-                action,
-                executionState: flowExecutionContext,
-                constants,
-            })
+            if (node.actionType === FlowActionType.LOOP_ON_ITEMS) {
+                // LOOP_ON_ITEMS требует adjacencyMap для навигации по телу цикла
+                flowExecutionContext = await graphLoopExecutor.handle({
+                    action,
+                    executionState: flowExecutionContext,
+                    constants,
+                    adjacencyMap: adjacency,
+                })
+            }
+            else {
+                const handler = getGraphExecutorForAction(node.actionType)
+                flowExecutionContext = await handler.handle({
+                    action,
+                    executionState: flowExecutionContext,
+                    constants,
+                })
+            }
 
             // Проверить лимит размера логов
             flowExecutionContext = applyLogSizeLimitIfExceeded(flowExecutionContext, node)
