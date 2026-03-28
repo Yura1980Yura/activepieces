@@ -11,6 +11,7 @@ import {
   createGraphAddNodeFromDrop,
   createGraphRemoveNodeOperation,
   createGraphRemoveEdgeOperation,
+  createGraphMoveNodeOperation,
   type PaletteDragData,
 } from '@activepieces/shared';
 import { type Node } from '@xyflow/react';
@@ -181,6 +182,23 @@ const BuilderPage = () => {
     [applyOperation],
   );
 
+  /**
+   * P2-B06: Сохранить позицию ноды через GRAPH_MOVE_NODE.
+   *
+   * Вызывается из GraphCanvas onNodeDragStop (с debounce 500ms).
+   * Обновляет позицию ноды в graphData для серверной персистенции.
+   */
+  const handleMoveNode = useCallback(
+    (nodeId: string, position: { x: number; y: number }) => {
+      const operation = createGraphMoveNodeOperation(nodeId, position);
+      applyOperation({
+        type: FlowOperationType.GRAPH_MOVE_NODE,
+        request: operation.request,
+      });
+    },
+    [applyOperation],
+  );
+
   return (
     <div className="flex h-full w-full flex-col relative max-h-[100vh]">
       <div className="z-40">
@@ -204,6 +222,7 @@ const BuilderPage = () => {
                     onPieceDrop={handlePieceDrop}
                     onDeleteNode={handleDeleteNode}
                     onDeleteEdge={handleDeleteEdge}
+                    onMoveNode={handleMoveNode}
                   />
                 </div>
               </div>

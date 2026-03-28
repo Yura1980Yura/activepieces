@@ -317,3 +317,35 @@ export function createGraphRemoveEdgeOperation(
         },
     }
 }
+
+/**
+ * Создать FlowOperationRequest типа GRAPH_MOVE_NODE для обновления позиции ноды.
+ *
+ * Чистая функция маппинга: конвертирует nodeId и position в формат
+ * GRAPH_MOVE_NODE request. Используется onNodeDragStop handler для
+ * сохранения позиции ноды после перетаскивания.
+ *
+ * P2-B06: Авто-сохранение позиций при dragEnd.
+ *
+ * @param nodeId - ID ноды для перемещения
+ * @param position - Новая позиция { x, y }
+ * @returns Объект с type=GRAPH_MOVE_NODE и request: { nodeId, position }
+ */
+export function createGraphMoveNodeOperation(
+    nodeId: string,
+    position: { x: number; y: number },
+): {
+    type: 'GRAPH_MOVE_NODE'
+    request: {
+        nodeId: string
+        position: { x: number; y: number }
+    }
+} {
+    return {
+        type: 'GRAPH_MOVE_NODE',
+        request: {
+            nodeId,
+            position: { x: position.x, y: position.y },
+        },
+    }
+}

@@ -16,6 +16,7 @@ import {
     createGraphAddEdgeFromConnection,
     createGraphRemoveNodeOperation,
     createGraphRemoveEdgeOperation,
+    createGraphMoveNodeOperation,
     GRAPH_NODE_TYPE_KEYS,
     CANVAS_CONTROL_ACTIONS,
     getCanvasControlActions,
@@ -781,5 +782,89 @@ describe('createGraphRemoveEdgeOperation', () => {
         const result = createGraphRemoveEdgeOperation('custom-edge-id-format')
 
         expect(result.request.edgeId).toBe('custom-edge-id-format')
+    })
+})
+
+// === createGraphMoveNodeOperation (P2-B06) ===
+
+describe('createGraphMoveNodeOperation', () => {
+    it('должен создать GRAPH_MOVE_NODE операцию с корректным nodeId и position', () => {
+        const result = createGraphMoveNodeOperation('step_1', { x: 100, y: 200 })
+
+        expect(result.type).toBe('GRAPH_MOVE_NODE')
+        expect(result.request.nodeId).toBe('step_1')
+        expect(result.request.position.x).toBe(100)
+        expect(result.request.position.y).toBe(200)
+    })
+
+    it('должен создать операцию для trigger node', () => {
+        const result = createGraphMoveNodeOperation('trigger', { x: 50, y: 75 })
+
+        expect(result.type).toBe('GRAPH_MOVE_NODE')
+        expect(result.request.nodeId).toBe('trigger')
+        expect(result.request.position).toEqual({ x: 50, y: 75 })
+    })
+
+    it('должен поддерживать отрицательные координаты', () => {
+        const result = createGraphMoveNodeOperation('step_1', { x: -100, y: -200 })
+
+        expect(result.request.position.x).toBe(-100)
+        expect(result.request.position.y).toBe(-200)
+    })
+
+    it('должен поддерживать дробные координаты', () => {
+        const result = createGraphMoveNodeOperation('step_1', { x: 10.5, y: 20.7 })
+
+        expect(result.request.position.x).toBe(10.5)
+        expect(result.request.position.y).toBe(20.7)
+    })
+
+    it('должен поддерживать нулевые координаты', () => {
+        const result = createGraphMoveNodeOperation('step_1', { x: 0, y: 0 })
+
+        expect(result.request.position.x).toBe(0)
+        expect(result.request.position.y).toBe(0)
+    })
+
+    it('должен содержать ровно type и request поля', () => {
+        const result = createGraphMoveNodeOperation('step_1', { x: 100, y: 200 })
+
+        expect(Object.keys(result).sort()).toEqual(['request', 'type'])
+        expect(Object.keys(result.request).sort()).toEqual(['nodeId', 'position'])
+        expect(Object.keys(result.request.position).sort()).toEqual(['x', 'y'])
+    })
+
+    it('должен возвращать новый объект при каждом вызове', () => {
+        const result1 = createGraphMoveNodeOperation('step_1', { x: 100, y: 200 })
+        const result2 = createGraphMoveNodeOperation('step_1', { x: 100, y: 200 })
+
+        expect(result1).not.toBe(result2)
+        expect(result1.request).not.toBe(result2.request)
+        expect(result1.request.position).not.toBe(result2.request.position)
+        expect(result1).toEqual(result2)
+    })
+
+    it('должен сохранять пустую строку как nodeId', () => {
+        const result = createGraphMoveNodeOperation('', { x: 0, y: 0 })
+
+        expect(result.request.nodeId).toBe('')
+    })
+
+    it('должен копировать position а не использовать ссылку', () => {
+        const pos = { x: 100, y: 200 }
+        const result = createGraphMoveNodeOperation('step_1', pos)
+
+        // Мутация оригинального объекта не должна влиять на результат
+        pos.x = 999
+        pos.y = 888
+        expect(result.request.position.x).toBe(100)
+        expect(result.request.position.y).toBe(200)
+    })
+
+    it('должен создать операцию с большими координатами', () => {
+        const result = createGraphMoveNodeOperation('step_1', { x: 99999, y: 88888 })
+
+        expect(result.request.position.x).toBe(99999)
+        expect(result.request.position.y).toBe(88888)
     })
 })

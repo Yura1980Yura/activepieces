@@ -10,6 +10,7 @@ import {
   createGraphAddEdgeFromConnection,
   createGraphRemoveNodeOperation,
   createGraphRemoveEdgeOperation,
+  createGraphMoveNodeOperation,
   type GraphNode,
   type ClassifiedGraphEdge,
 } from '@activepieces/shared';
@@ -84,6 +85,8 @@ export type GraphState = {
   deleteSelectedGraphNodes: (nodeIds: string[]) => void;
   /** Remove selected edges */
   deleteSelectedGraphEdges: (edgeIds: string[]) => void;
+  /** P2-B06: Сохранить позицию ноды через GRAPH_MOVE_NODE */
+  moveGraphNodePosition: (nodeId: string, position: { x: number; y: number }) => void;
 };
 
 type GraphStateInitialState = Pick<BuilderState, 'flowVersion'>;
@@ -240,6 +243,15 @@ export const createGraphState = (
           request: operation.request,
         });
       }
+    },
+
+    moveGraphNodePosition: (nodeId: string, position: { x: number; y: number }) => {
+      const state = get();
+      const operation = createGraphMoveNodeOperation(nodeId, position);
+      state.applyOperation({
+        type: FlowOperationType.GRAPH_MOVE_NODE,
+        request: operation.request,
+      });
     },
   };
 };

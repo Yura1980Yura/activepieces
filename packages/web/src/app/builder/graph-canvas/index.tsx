@@ -20,9 +20,10 @@ import {
   type Node,
   type Edge,
   type NodeMouseHandler,
+  type NodeDragHandler,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 
 import { GraphCanvasControls } from './canvas-controls';
 import {
@@ -61,6 +62,8 @@ export type GraphCanvasProps = {
   onDeleteNode?: (nodeId: string) => void;
   /** P2-B04: Callback для удаления ребра через контекстное меню → GRAPH_REMOVE_EDGE */
   onDeleteEdge?: (edgeId: string) => void;
+  /** P2-B06: Callback для сохранения позиции ноды после перетаскивания → GRAPH_MOVE_NODE */
+  onMoveNode?: (nodeId: string, position: { x: number; y: number }) => void;
 };
 
 /**
@@ -82,6 +85,7 @@ const GraphCanvasInner = React.memo(
     onPaneContextMenu,
     onDeleteNode,
     onDeleteEdge,
+    onMoveNode,
   }: GraphCanvasProps) => {
     const { nodeTypes, edgeTypes } = useGraphCanvasContext();
     const reactFlowInstance = useReactFlow();
@@ -137,6 +141,60 @@ const GraphCanvasInner = React.memo(
       },
       [onDeleteNode, onDeleteEdge],
     );
+
+    /**
+     * P2-B06: Авто-сохранение позиций при dragEnd с debounce 500ms.
+     *
+     * При перетаскивании ноды ReactFlow обновляет позицию локально через
+     * onNodesChange. При dragEnd нужно сохранить новую позицию в graphData
+     * через GRAPH_MOVE_NODE для серверной персистенции.
+     *
+     * Debounce 500ms предотвращает частые dispatch операций при быстрых
+     * перетаскиваниях нескольких нод. Используем useRef + setTimeout
+     * для debounce без внешних зависимостей.
+     */
+    const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const pendingMovesRef = useRef<Map<string, { x: number; y: number }>>(new Map());
+
+    const flushPendingMoves = useCallback(() => {
+      const moves = pendingMovesRef.current;
+      if (moves.size === 0) return;
+      for (const [nodeId, position] of moves.entries()) {
+        onMoveNode?.(nodeId, position);
+      }
+      moves.clear();
+    }, [onMoveNode]);
+
+    const handleNodeDragStop: NodeDragHandler = useCallback(
+      (_event, node, draggedNodes) => {
+        // Собираем позиции всех перемещённых нод (при multi-select draggedNodes > 1)
+        const nodesToMove = draggedNodes.length > 0 ? draggedNodes : [node];
+        for (const n of nodesToMove) {
+          pendingMovesRef.current.set(n.id, { x: n.position.x, y: n.position.y });
+        }
+
+        // Сбрасываем предыдущий таймер и ставим новый (debounce 500ms)
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current);
+        }
+        debounceTimerRef.current = setTimeout(flushPendingMoves, 500);
+      },
+      [flushPendingMoves],
+    );
+
+    // Очистка таймера при размонтировании + flush оставшихся moves
+    useEffect(() => {
+      return () => {
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current);
+        }
+        // Flush при размонтировании чтобы не потерять последний drag
+        const moves = pendingMovesRef.current;
+        if (moves.size > 0) {
+          flushPendingMoves();
+        }
+      };
+    }, [flushPendingMoves]);
 
     /**
      * P2-B05: Ctrl+A (Cmd+A на macOS) — выделить все ноды и рёбра.
@@ -228,6 +286,7 @@ const GraphCanvasInner = React.memo(
           onEdgeContextMenu={onEdgeContextMenu}
           onPaneContextMenu={onPaneContextMenu}
           onDelete={handleDelete}
+          onNodeDragStop={handleNodeDragStop}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
           isValidConnection={isValidConnection}
@@ -276,6 +335,7 @@ GraphCanvasInner.displayName = 'GraphCanvasInner';
  * - Context menu events: node, edge, canvas right-click handlers (P1-E02)
  * - Keyboard shortcuts: Delete/Backspace (remove selected), Ctrl+A (select all),
  *   Shift+click (multi-select), rectangle selection on drag (P2-B05)
+ * - Auto-save node positions: onNodeDragStop with 500ms debounce → GRAPH_MOVE_NODE (P2-B06)
  *
  * Wraps GraphCanvasInner with GraphCanvasProvider to supply
  * nodeTypes, edgeTypes, and ReactFlowProvider.
