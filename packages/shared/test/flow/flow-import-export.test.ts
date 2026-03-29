@@ -506,7 +506,11 @@ describe('IMPORT_FLOW с graphData через flowOperations.apply', () => {
         })
 
         expect(result.graphData).toBeDefined()
-        expect(result.graphData!.nodes).toHaveLength(1)
-        expect(result.graphData!.nodes[0].id).toBe('new_node')
+        // syncGraphDataFromTrigger добавляет trigger node + сохраняет new_node = 2 ноды
+        expect(result.graphData!.nodes).toHaveLength(2)
+        const nodeIds = result.graphData!.nodes.map(n => n.id).sort()
+        expect(nodeIds).toEqual(['new_node', 'trigger'])
+        // old_node удалена
+        expect(result.graphData!.nodes.find(n => n.id === 'old_node')).toBeUndefined()
     })
 })

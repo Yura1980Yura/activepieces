@@ -493,7 +493,7 @@ export const flowOperations = {
         // После ЛЮБОЙ операции кроме GRAPH_* обновляем graphData из trigger.
         // GRAPH_* операции исключены — они сами являются источником для graphData,
         // и для них работает syncTriggerFromGraphData (прямая синхронизация).
-        if (clonedVersion.graphData && !GRAPH_OPERATIONS.has(operation.type)) {
+        if (clonedVersion.graphData && !SKIP_REVERSE_SYNC.has(operation.type)) {
             clonedVersion = syncGraphDataFromTrigger(clonedVersion)
         }
         clonedVersion.valid = flowStructureUtil.getAllSteps(clonedVersion.trigger).every((step) => {
@@ -505,16 +505,19 @@ export const flowOperations = {
 }
 
 /**
- * Set операций которые модифицируют graphData напрямую.
- * Для них обратная синхронизация trigger→graphData НЕ нужна —
- * они сами обновляют graphData и вызывают syncTriggerFromGraphData.
+ * Set операций которые управляют graphData напрямую.
+ * Для них обратная синхронизация trigger→graphData НЕ нужна:
+ * - GRAPH_* операции сами обновляют graphData и вызывают syncTriggerFromGraphData
+ * - IMPORT_FLOW управляет graphData через суб-операции GRAPH_ADD_NODE/EDGE,
+ *   финальный sync перезаписал бы orphan ноды которые ещё не соединены рёбрами
  */
-const GRAPH_OPERATIONS = new Set<FlowOperationType>([
+const SKIP_REVERSE_SYNC = new Set<FlowOperationType>([
     FlowOperationType.GRAPH_ADD_NODE,
     FlowOperationType.GRAPH_REMOVE_NODE,
     FlowOperationType.GRAPH_ADD_EDGE,
     FlowOperationType.GRAPH_REMOVE_EDGE,
     FlowOperationType.GRAPH_MOVE_NODE,
+    FlowOperationType.IMPORT_FLOW,
 ])
 
 /**

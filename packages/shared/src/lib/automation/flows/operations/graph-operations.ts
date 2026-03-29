@@ -76,7 +76,8 @@ export const _graphRemoveNode = (flowVersion: FlowVersion, request: GraphRemoveN
     }
     const nodeIndex = cloned.graphData.nodes.findIndex((n) => n.id === request.nodeId)
     if (nodeIndex === -1) {
-        throw new Error(`[GRAPH_REMOVE_NODE] Нода с id="${request.nodeId}" не найдена`)
+        // Нода уже удалена (например, syncGraphDataFromTrigger orphan removal) — идемпотентно
+        return cloned
     }
     cloned.graphData.nodes.splice(nodeIndex, 1)
     cloned.graphData.edges = cloned.graphData.edges.filter(
