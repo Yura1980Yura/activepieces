@@ -35,12 +35,15 @@ import { GraphOutputHandle } from './handles';
  *   Trigger: output only (no input handle)
  */
 const GraphTriggerNode = React.memo(
-  ({ data }: NodeProps & { data: GraphNodeData }) => {
+  ({ data, selected }: NodeProps & { data: GraphNodeData }) => {
     const { step, stepName, executionStatus, errorMessage } = data;
 
     // Execution overlay CSS class (P2-D01)
     const visualStatus = (executionStatus as NodeExecutionVisualStatus) || NodeExecutionVisualStatus.IDLE;
     const executionCssClass = NODE_EXECUTION_CSS_CLASSES[visualStatus] || '';
+
+    // Selection highlight
+    const selectedCssClass = selected ? 'ring-2 ring-primary border-primary shadow-md' : '';
 
     // Error state (P2-D03)
     const showError = isNodeInErrorState(visualStatus) && !!errorMessage;
@@ -49,7 +52,7 @@ const GraphTriggerNode = React.memo(
       <div
         data-step-name={stepName}
         {...{ [NODE_EXECUTION_STATUS_ATTR]: visualStatus }}
-        className={`relative rounded-md rounded-tl-none border border-solid border-border bg-background px-3 py-2 transition-all duration-300 ${executionCssClass}`}
+        className={`relative rounded-md rounded-tl-none border border-solid border-border bg-background px-3 py-2 transition-all duration-300 ${executionCssClass} ${selectedCssClass}`}
         style={{
           minWidth: 200,
           minHeight: 60,
