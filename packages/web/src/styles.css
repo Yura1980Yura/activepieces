@@ -525,9 +525,12 @@
     cursor: default !important;
   }
 
-  .react-flow__edge.selectable > path {
-    /* If necessary, add !important to the rule */
+  .react-flow__edge.selectable > path.react-flow__edge-path {
     pointer-events: none !important;
+  }
+
+  .react-flow__edge.selectable > path.react-flow__edge-interaction {
+    pointer-events: stroke !important;
   }
 
   /* This is a hack to fix the issue with the pointer events being set to none when the vaul drawer is open */

@@ -25,7 +25,7 @@ import {
   type Connection,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { GraphCanvasControls } from './canvas-controls';
 import {
@@ -275,6 +275,22 @@ const GraphCanvasInner = React.memo(
       [reactFlowInstance, onPieceDrop],
     );
 
+    /**
+     * Обогащаем edges полем data.onDelete для кнопки удаления на edge.
+     * GraphEdge компонент рендерит кнопку (x) только если data.onDelete задан.
+     */
+    const enrichedEdges = useMemo(
+      () =>
+        edges.map((edge) => ({
+          ...edge,
+          data: {
+            ...edge.data,
+            onDelete: onDeleteEdge,
+          },
+        })),
+      [edges, onDeleteEdge],
+    );
+
     return (
       <div className="size-full relative overflow-hidden bg-builder-background">
         <ReactFlow
@@ -282,7 +298,7 @@ const GraphCanvasInner = React.memo(
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           nodes={nodes}
-          edges={edges}
+          edges={enrichedEdges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}

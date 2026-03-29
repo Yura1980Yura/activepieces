@@ -36,6 +36,7 @@ const GraphEdge = React.memo(
     targetY,
     sourcePosition,
     targetPosition,
+    selected,
     data,
   }: EdgeProps & { data?: GraphEdgeData }) => {
     const [edgePath, labelX, labelY] = getBezierPath({
@@ -53,8 +54,8 @@ const GraphEdge = React.memo(
         <BaseEdge
           path={edgePath}
           style={{
-            stroke: style.stroke,
-            strokeWidth: style.strokeWidth,
+            stroke: selected ? '#6366f1' : style.stroke,
+            strokeWidth: selected ? 3 : style.strokeWidth,
           }}
         />
         {data?.onDelete && (
