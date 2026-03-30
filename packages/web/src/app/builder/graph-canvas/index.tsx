@@ -66,6 +66,8 @@ export type GraphCanvasProps = {
   onDeleteEdge?: (edgeId: string) => void;
   /** P2-B06: Callback для сохранения позиции ноды после перетаскивания → GRAPH_MOVE_NODE */
   onMoveNode?: (nodeId: string, position: { x: number; y: number }) => void;
+  /** P3-B01: Callback для тестирования отдельного шага (Play при hover) */
+  onTestStep?: (stepName: string) => void;
 };
 
 /**
@@ -88,6 +90,7 @@ const GraphCanvasInner = React.memo(
     onDeleteNode,
     onDeleteEdge,
     onMoveNode,
+    onTestStep,
   }: GraphCanvasProps) => {
     const { nodeTypes, edgeTypes } = useGraphCanvasContext();
     const reactFlowInstance = useReactFlow();
@@ -276,6 +279,23 @@ const GraphCanvasInner = React.memo(
     );
 
     /**
+     * P3-B01: Обогащаем nodes полями onTestStep и onDeleteNode для hover controls.
+     * GraphStepNode рендерит Play/Delete кнопки при hover если callbacks заданы.
+     */
+    const enrichedNodes = useMemo(
+      () =>
+        nodes.map((node) => ({
+          ...node,
+          data: {
+            ...node.data,
+            onTestStep,
+            onDeleteNode,
+          },
+        })),
+      [nodes, onTestStep, onDeleteNode],
+    );
+
+    /**
      * Обогащаем edges полем data.onDelete для кнопки удаления на edge.
      * GraphEdge компонент рендерит кнопку (x) только если data.onDelete задан.
      */
@@ -297,7 +317,7 @@ const GraphCanvasInner = React.memo(
           className="bg-builder-background"
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
-          nodes={nodes}
+          nodes={enrichedNodes}
           edges={enrichedEdges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}

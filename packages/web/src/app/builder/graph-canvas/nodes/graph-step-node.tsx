@@ -10,8 +10,8 @@ import {
   NODE_ERROR_TOOLTIP_ATTR,
 } from '@activepieces/shared';
 import { type NodeProps } from '@xyflow/react';
-import { CircleAlert, X } from 'lucide-react';
-import React from 'react';
+import { CircleAlert, Play, Trash2 } from 'lucide-react';
+import React, { useState, useCallback } from 'react';
 
 import type { GraphNodeData } from '@activepieces/shared';
 
@@ -29,12 +29,21 @@ import {
 } from './handles';
 
 /**
+ * P3-B01: Расширенный тип данных ноды с UI callbacks для hover controls.
+ * Callbacks передаются через enrichedNodes в GraphCanvasInner.
+ */
+type GraphStepNodeData = GraphNodeData & {
+  onTestStep?: (stepName: string) => void;
+  onDeleteNode?: (nodeId: string) => void;
+};
+
+/**
  * GraphStepNode — custom ReactFlow node for action steps in the graph canvas.
  *
  * Renders:
  * - Input handle (top-center) for incoming connections
  * - Node body with step displayName
- * - Delete button (×) when selected
+ * - Hover controls: Play (test step) and Delete (P3-B01) — visible on hover
  * - Error icon + tooltip for FAILED nodes (P2-D03)
  * - Output handle (bottom-center) for nextAction connections
  * - Loop-output handle (right) for LOOP_ON_ITEMS nodes (firstLoopAction)
@@ -46,10 +55,36 @@ import {
  * Handle IDs match HANDLE_IDS constants from connection-rules.ts.
  */
 const GraphStepNode = React.memo(
-  ({ data, selected }: NodeProps & { data: GraphNodeData }) => {
-    const { step, stepName, actionType, executionStatus, errorMessage } = data;
+  ({ data, selected, id }: NodeProps & { data: GraphStepNodeData }) => {
+    const { step, stepName, actionType, executionStatus, errorMessage, onTestStep, onDeleteNode } = data;
     const isLoop = LOOP_OUTPUT_TYPES.has(actionType);
     const isRouter = BRANCH_OUTPUT_TYPES.has(actionType);
+
+    // P3-B01: Hover state для показа Play/Delete controls
+    const [isHovered, setIsHovered] = useState(false);
+
+    const handleMouseEnter = useCallback(() => setIsHovered(true), []);
+    const handleMouseLeave = useCallback(() => setIsHovered(false), []);
+
+    // P3-B01: Play (test step) handler
+    const handleTestStep = useCallback(
+      (e: React.MouseEvent) => {
+        e.stopPropagation();
+        e.preventDefault();
+        onTestStep?.(stepName);
+      },
+      [onTestStep, stepName],
+    );
+
+    // P3-B01: Delete handler — вызывает onDeleteNode напрямую (вместо dispatch Delete key)
+    const handleDelete = useCallback(
+      (e: React.MouseEvent) => {
+        e.stopPropagation();
+        e.preventDefault();
+        onDeleteNode?.(id);
+      },
+      [onDeleteNode, id],
+    );
 
     // Determine branch count for router nodes
     let branchCount = 0;
@@ -70,6 +105,9 @@ const GraphStepNode = React.memo(
     // Error state (P2-D03)
     const showError = isNodeInErrorState(visualStatus) && !!errorMessage;
 
+    // P3-B01: Показываем hover controls при hover ИЛИ при selected
+    const showHoverControls = isHovered || selected;
+
     return (
       <div
         data-step-name={stepName}
@@ -79,24 +117,46 @@ const GraphStepNode = React.memo(
           minWidth: 200,
           minHeight: 60,
         }}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
         <GraphInputHandle />
 
-        {/* Delete button — visible when selected */}
-        {selected && (
-          <button
-            className="absolute -top-2 -right-2 z-10 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm hover:bg-destructive hover:text-destructive-foreground hover:border-destructive transition-colors"
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              // Dispatch delete key event — ReactFlow onDelete handler will pick it up
-              const deleteEvent = new KeyboardEvent('keydown', { key: 'Delete', bubbles: true });
-              e.currentTarget.closest('.react-flow')?.dispatchEvent(deleteEvent);
-            }}
-            title="Delete"
+        {/* P3-B01: Hover controls — Play (test step) + Delete */}
+        {showHoverControls && (
+          <div
+            className="absolute -top-3 right-0 z-10 flex items-center gap-1"
+            data-testid="node-hover-controls"
           >
-            <X className="h-3 w-3" />
-          </button>
+            {/* Play (test step) button */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className="flex h-6 w-6 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors"
+                  onMouseDown={handleTestStep}
+                  data-testid="node-play-button"
+                  title="Test step"
+                >
+                  <Play className="h-3 w-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Test step</TooltipContent>
+            </Tooltip>
+            {/* Delete button */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className="flex h-6 w-6 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm hover:bg-destructive hover:text-destructive-foreground hover:border-destructive transition-colors"
+                  onMouseDown={handleDelete}
+                  data-testid="node-delete-button"
+                  title="Delete"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Delete</TooltipContent>
+            </Tooltip>
+          </div>
         )}
 
         <div className="flex items-center gap-2">

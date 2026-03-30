@@ -23,6 +23,8 @@ import { StepSettingsProvider } from '@/app/builder/step-settings/step-settings-
 import { RightSideBarType } from '@/app/builder/types';
 import { ChatDrawer } from '@/app/routes/chat/chat-drawer';
 import { ShowPoweredBy } from '@/components/custom/show-powered-by';
+import { flowRunsApi } from '@/features/flow-runs';
+import { authenticationSession } from '@/lib/authentication-session';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -72,6 +74,7 @@ const BuilderPage = () => {
     onGraphConnect,
     autoLayoutGraph,
     applyOperation,
+    addActionTestListener,
   ] = useBuilderStateContext((state) => [
     state.flowVersion,
     state.rightSidebar,
@@ -89,6 +92,7 @@ const BuilderPage = () => {
     state.onGraphConnect,
     state.autoLayoutGraph,
     state.applyOperation,
+    state.addActionTestListener,
   ]);
   useEffect(() => {
     return () => {
@@ -200,6 +204,34 @@ const BuilderPage = () => {
     [applyOperation],
   );
 
+  /**
+   * P3-B01: Тест отдельного шага (Play при hover на ноду).
+   *
+   * Выделяет шаг (открывает step settings) и запускает test step через API.
+   * addActionTestListener подписывается на WebSocket для получения результата.
+   */
+  const handleTestStep = useCallback(
+    async (stepName: string) => {
+      selectStepByName(stepName);
+      try {
+        const response = await flowRunsApi.testStep({
+          request: {
+            projectId: authenticationSession.getProjectId()!,
+            flowVersionId: flowVersion.id,
+            stepName,
+          },
+        });
+        addActionTestListener({
+          runId: response.runId,
+          stepName,
+        });
+      } catch {
+        // Ошибка обрабатывается через toast в API layer
+      }
+    },
+    [selectStepByName, flowVersion.id, addActionTestListener],
+  );
+
   return (
     <div className="flex h-full w-full flex-col relative max-h-[100vh]">
       <div className="z-40">
@@ -224,6 +256,7 @@ const BuilderPage = () => {
                     onDeleteNode={handleDeleteNode}
                     onDeleteEdge={handleDeleteEdge}
                     onMoveNode={handleMoveNode}
+                    onTestStep={handleTestStep}
                   />
                   <PublishFlowReminderWidget />
                   <RunInfoWidget />
