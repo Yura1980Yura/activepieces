@@ -11,6 +11,9 @@ import {
   createGraphRemoveNodeOperation,
   createGraphRemoveEdgeOperation,
   createGraphMoveNodeOperation,
+  getNodeVisualStatus,
+  getNodeErrorMessage,
+  NodeExecutionVisualStatus,
   type GraphNode,
   type ClassifiedGraphEdge,
 } from '@activepieces/shared';
@@ -105,6 +108,7 @@ export const createGraphState = (
   initialState: GraphStateInitialState,
   get: StoreApi<BuilderState>['getState'],
   set: StoreApi<BuilderState>['setState'],
+  api?: StoreApi<BuilderState>,
 ): GraphState => {
   const initialData = createInitialGraphData(initialState.flowVersion);
 
@@ -140,6 +144,64 @@ export const createGraphState = (
       },
     );
   }, 0);
+
+  /**
+   * P3-A03: Синхронизация execution overlay.
+   *
+   * Подписываемся на изменения state.run через Zustand api.subscribe().
+   * Когда run обновляется (WebSocket progress или setRun),
+   * пересчитываем executionStatus и errorMessage для каждой ноды
+   * используя shared утилиты getNodeVisualStatus() и getNodeErrorMessage().
+   *
+   * Подписка через api.subscribe с селектором state.run — реагирует
+   * только на изменения run, не на каждое обновление store.
+   */
+  const syncExecutionOverlay = () => {
+    const state = get();
+    const run = state.run;
+    const runSteps = run?.steps ?? null;
+    const runStatus = run?.status ?? null;
+
+    const currentNodes = state.graphNodes;
+    let hasChanges = false;
+    const updatedNodes = currentNodes.map((node) => {
+      const newStatus = getNodeVisualStatus(node.id, runSteps, runStatus);
+      const newErrorMessage = getNodeErrorMessage(node.id, runSteps) ?? undefined;
+      const currentStatus = (node.data.executionStatus as NodeExecutionVisualStatus) || NodeExecutionVisualStatus.IDLE;
+      const currentError = node.data.errorMessage;
+
+      if (currentStatus !== newStatus || currentError !== newErrorMessage) {
+        hasChanges = true;
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            executionStatus: newStatus,
+            errorMessage: newErrorMessage,
+          },
+        };
+      }
+      return node;
+    });
+
+    if (hasChanges) {
+      set({ graphNodes: updatedNodes });
+    }
+  };
+
+  // Подписка через Zustand store api.subscribe — реагирует на изменения run.
+  // Deferred для избежания circular set() при инициализации.
+  if (api) {
+    setTimeout(() => {
+      let prevRun = get().run;
+      api.subscribe((state) => {
+        if (state.run !== prevRun) {
+          prevRun = state.run;
+          syncExecutionOverlay();
+        }
+      });
+    }, 0);
+  }
 
   return {
     graphNodes: initialData.nodes,

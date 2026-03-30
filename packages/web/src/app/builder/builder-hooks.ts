@@ -50,7 +50,7 @@ export type BuilderInitialState = Pick<
 
 export type BuilderStore = ReturnType<typeof createBuilderStore>;
 export const createBuilderStore = (initialState: BuilderInitialState) =>
-  create<BuilderState>((set, get) => {
+  create<BuilderState>((set, get, api) => {
     const flowState = createFlowState(initialState, get, set);
     const pieceSelectorState = createPieceSelectorState(get, set);
     const runState = createRunState(initialState, get, set);
@@ -58,7 +58,7 @@ export const createBuilderStore = (initialState: BuilderInitialState) =>
     const canvasState = createCanvasState(initialState, set);
     const stepFormState = createStepFormState(set);
     const notesState = createNotesState(get, set);
-    const graphState = createGraphState(initialState, get, set);
+    const graphState = createGraphState(initialState, get, set, api);
     return {
       ...flowState,
       ...notesState,
