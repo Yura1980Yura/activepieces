@@ -29,8 +29,8 @@ describe('keyboard-shortcuts', () => {
             expect(GRAPH_SHORTCUT_IDS.MULTI_SELECT).toBe('multi-select')
         })
 
-        it('should have exactly 4 shortcut ids', () => {
-            expect(Object.keys(GRAPH_SHORTCUT_IDS)).toHaveLength(4)
+        it('should have exactly 6 shortcut ids', () => {
+            expect(Object.keys(GRAPH_SHORTCUT_IDS)).toHaveLength(6)
         })
     })
 
@@ -115,7 +115,7 @@ describe('keyboard-shortcuts', () => {
         it('should return array of all shortcuts', () => {
             const shortcuts = getGraphKeyboardShortcuts()
             expect(Array.isArray(shortcuts)).toBe(true)
-            expect(shortcuts).toHaveLength(4)
+            expect(shortcuts).toHaveLength(6)
         })
 
         it('should include all defined shortcut ids', () => {
