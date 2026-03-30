@@ -1,4 +1,6 @@
 import {
+  FlowOperationType,
+  FlowTriggerType,
   NodeExecutionVisualStatus,
   NODE_EXECUTION_CSS_CLASSES,
   NODE_EXECUTION_STATUS_ATTR,
@@ -12,6 +14,8 @@ import React from 'react';
 
 import type { GraphNodeData } from '@activepieces/shared';
 
+import { useBuilderStateContext } from '@/app/builder/builder-hooks';
+import { PieceSelector } from '@/app/builder/pieces-selector';
 import {
   Tooltip,
   TooltipContent,
@@ -30,6 +34,7 @@ import { GraphOutputHandle } from './handles';
  * - Error icon + tooltip for FAILED nodes (P2-D03)
  * - Output handle (bottom-center) for nextAction connections
  * - Execution status overlay (P2-D01): border color based on executionStatus
+ * - PieceSelector popover for EMPTY trigger (P3-A01): click opens piece selector
  *
  * Architecture doc section 6.3 defines:
  *   Trigger: output only (no input handle)
@@ -37,6 +42,11 @@ import { GraphOutputHandle } from './handles';
 const GraphTriggerNode = React.memo(
   ({ data, selected }: NodeProps & { data: GraphNodeData }) => {
     const { step, stepName, executionStatus, errorMessage } = data;
+
+    // P3-A01: Получаем тип trigger из builder state для piece selector
+    const isEmptyTrigger = useBuilderStateContext(
+      (state) => state.flowVersion.trigger.type === FlowTriggerType.EMPTY,
+    );
 
     // Execution overlay CSS class (P2-D01)
     const visualStatus = (executionStatus as NodeExecutionVisualStatus) || NodeExecutionVisualStatus.IDLE;
@@ -48,7 +58,7 @@ const GraphTriggerNode = React.memo(
     // Error state (P2-D03)
     const showError = isNodeInErrorState(visualStatus) && !!errorMessage;
 
-    return (
+    const nodeContent = (
       <div
         data-step-name={stepName}
         {...{ [NODE_EXECUTION_STATUS_ATTR]: visualStatus }}
@@ -90,6 +100,26 @@ const GraphTriggerNode = React.memo(
         <GraphOutputHandle />
       </div>
     );
+
+    // P3-A01: Оборачиваем в PieceSelector для EMPTY trigger.
+    // При клике на EMPTY trigger, canvas-state.ts selectStepByName уже
+    // устанавливает openedPieceSelectorStepNameOrAddButtonId = 'trigger',
+    // PieceSelector реагирует на это и открывает Popover.
+    if (isEmptyTrigger) {
+      return (
+        <PieceSelector
+          operation={{
+            type: FlowOperationType.UPDATE_TRIGGER,
+          }}
+          id="trigger"
+          openSelectorOnClick={true}
+        >
+          {nodeContent}
+        </PieceSelector>
+      );
+    }
+
+    return nodeContent;
   },
 );
 
