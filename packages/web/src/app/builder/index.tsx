@@ -40,6 +40,7 @@ import { flowCanvasHooks } from './flow-canvas/hooks';
 import { flowCanvasConsts } from './flow-canvas/utils/consts';
 import PublishFlowReminderWidget from './flow-canvas/widgets/publish-flow-reminder-widget';
 import { RunInfoWidget } from './flow-canvas/widgets/run-info-widget';
+import { TestFlowWidget } from './flow-canvas/widgets/test-flow-widget';
 import { ViewingOldVersionWidget } from './flow-canvas/widgets/viewing-old-version-widget';
 import { FlowVersionsList } from './flow-versions';
 import { GraphCanvas } from './graph-canvas';
@@ -227,6 +228,11 @@ const BuilderPage = () => {
                   <PublishFlowReminderWidget />
                   <RunInfoWidget />
                   <ViewingOldVersionWidget />
+                  <div className="absolute bottom-[12px] z-40 w-full flex justify-center pointer-events-none">
+                    <div className="pointer-events-auto">
+                      <TestFlowWidget />
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (
