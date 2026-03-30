@@ -8,8 +8,14 @@ import {
 } from '@activepieces/shared';
 import { useQueryClient } from '@tanstack/react-query';
 import { t } from 'i18next';
-import { ChevronDown, CircleHelp, HistoryIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import {
+  ChevronDown,
+  CircleHelp,
+  HistoryIcon,
+  Loader2Icon,
+  CheckIcon,
+} from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import {
   createSearchParams,
   useNavigate,
@@ -64,13 +70,42 @@ export const BuilderHeader = () => {
     moveToFolderClientSide,
     applyOperation,
     setRightSidebar,
+    saving,
   ] = useBuilderStateContext((state) => [
     state.flow,
     state.flowVersion,
     state.moveToFolderClientSide,
     state.applyOperation,
     state.setRightSidebar,
+    state.saving,
   ]);
+
+  const [showSaved, setShowSaved] = useState(false);
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wasSavingRef = useRef(false);
+
+  useEffect(() => {
+    if (saving) {
+      wasSavingRef.current = true;
+      setShowSaved(false);
+      if (savedTimerRef.current) {
+        clearTimeout(savedTimerRef.current);
+        savedTimerRef.current = null;
+      }
+    } else if (wasSavingRef.current) {
+      wasSavingRef.current = false;
+      setShowSaved(true);
+      savedTimerRef.current = setTimeout(() => {
+        setShowSaved(false);
+        savedTimerRef.current = null;
+      }, 2000);
+    }
+    return () => {
+      if (savedTimerRef.current) {
+        clearTimeout(savedTimerRef.current);
+      }
+    };
+  }, [saving]);
 
   const { embedState } = useEmbedding();
   const { project } = projectCollectionUtils.useCurrentProject();
@@ -170,6 +205,18 @@ export const BuilderHeader = () => {
           )}
         </BreadcrumbList>
       </Breadcrumb>
+      {saving && (
+        <span className="flex items-center gap-1 text-xs text-muted-foreground animate-pulse" data-testid="save-indicator-saving">
+          <Loader2Icon className="h-3 w-3 animate-spin" />
+          {t('Saving...')}
+        </span>
+      )}
+      {!saving && showSaved && (
+        <span className="flex items-center gap-1 text-xs text-muted-foreground" data-testid="save-indicator-saved">
+          <CheckIcon className="h-3 w-3 text-success" />
+          {t('Saved')}
+        </span>
+      )}
     </div>
   );
 
