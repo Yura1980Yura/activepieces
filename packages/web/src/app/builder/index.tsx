@@ -75,6 +75,8 @@ const BuilderPage = () => {
     autoLayoutGraph,
     applyOperation,
     addActionTestListener,
+    graphUndo,
+    graphRedo,
   ] = useBuilderStateContext((state) => [
     state.flowVersion,
     state.rightSidebar,
@@ -93,6 +95,8 @@ const BuilderPage = () => {
     state.autoLayoutGraph,
     state.applyOperation,
     state.addActionTestListener,
+    state.graphUndo,
+    state.graphRedo,
   ]);
   useEffect(() => {
     return () => {
@@ -257,6 +261,8 @@ const BuilderPage = () => {
                     onDeleteEdge={handleDeleteEdge}
                     onMoveNode={handleMoveNode}
                     onTestStep={handleTestStep}
+                    onUndo={graphUndo}
+                    onRedo={graphRedo}
                   />
                   <PublishFlowReminderWidget />
                   <RunInfoWidget />

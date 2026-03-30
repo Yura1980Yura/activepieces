@@ -68,6 +68,10 @@ export type GraphCanvasProps = {
   onMoveNode?: (nodeId: string, position: { x: number; y: number }) => void;
   /** P3-B01: Callback для тестирования отдельного шага (Play при hover) */
   onTestStep?: (stepName: string) => void;
+  /** P3-B03: Callback для undo последней графовой операции (Ctrl+Z) */
+  onUndo?: () => void;
+  /** P3-B03: Callback для redo отменённой графовой операции (Ctrl+Shift+Z) */
+  onRedo?: () => void;
 };
 
 /**
@@ -91,6 +95,8 @@ const GraphCanvasInner = React.memo(
     onDeleteEdge,
     onMoveNode,
     onTestStep,
+    onUndo,
+    onRedo,
   }: GraphCanvasProps) => {
     const { nodeTypes, edgeTypes } = useGraphCanvasContext();
     const reactFlowInstance = useReactFlow();
@@ -252,6 +258,45 @@ const GraphCanvasInner = React.memo(
       document.addEventListener('keydown', handleKeyDown);
       return () => document.removeEventListener('keydown', handleKeyDown);
     }, [nodes, edges, onNodesChange, onEdgesChange]);
+
+    /**
+     * P3-B03: Ctrl+Z (Undo) / Ctrl+Shift+Z (Redo) горячие клавиши.
+     *
+     * Использует matchesShortcut() с определениями UNDO/REDO из shared.
+     * Redo проверяется ПЕРЕД Undo потому что Redo = Ctrl+Shift+Z является
+     * надмножеством Undo = Ctrl+Z (обе имеют key='z' + ctrlOrMeta=true),
+     * и matchesShortcut проверяет shift точно.
+     */
+    useEffect(() => {
+      const handleUndoRedo = (event: KeyboardEvent) => {
+        // Игнорируем если фокус внутри input/textarea
+        if (
+          event.target instanceof HTMLInputElement ||
+          event.target instanceof HTMLTextAreaElement
+        ) {
+          return;
+        }
+
+        const redoShortcut = GRAPH_KEYBOARD_SHORTCUTS[GRAPH_SHORTCUT_IDS.REDO];
+        if (matchesShortcut(event.key, event.ctrlKey || event.metaKey, event.shiftKey, redoShortcut)) {
+          event.preventDefault();
+          event.stopPropagation();
+          onRedo?.();
+          return;
+        }
+
+        const undoShortcut = GRAPH_KEYBOARD_SHORTCUTS[GRAPH_SHORTCUT_IDS.UNDO];
+        if (matchesShortcut(event.key, event.ctrlKey || event.metaKey, event.shiftKey, undoShortcut)) {
+          event.preventDefault();
+          event.stopPropagation();
+          onUndo?.();
+          return;
+        }
+      };
+
+      document.addEventListener('keydown', handleUndoRedo);
+      return () => document.removeEventListener('keydown', handleUndoRedo);
+    }, [onUndo, onRedo]);
 
     /**
      * Handle drop events from the piece palette sidebar.

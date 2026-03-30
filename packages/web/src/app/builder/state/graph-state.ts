@@ -32,6 +32,24 @@ import { StoreApi } from 'zustand';
 import { BuilderState } from '../builder-hooks';
 
 /**
+ * P3-B03: Максимальный размер стека undo/redo.
+ * Ограничение памяти: хранит не более MAX_UNDO_STACK_SIZE снимков.
+ */
+const MAX_UNDO_STACK_SIZE = 50;
+
+/**
+ * P3-B03: Снимок состояния графа для undo/redo.
+ * Содержит полное состояние graphNodes + graphEdges + flowVersion,
+ * чтобы при undo/redo можно было восстановить и визуальное состояние
+ * canvas и серверную модель данных.
+ */
+type GraphSnapshot = {
+  graphNodes: GraphNode[];
+  graphEdges: ClassifiedGraphEdge[];
+  flowVersion: FlowVersion;
+};
+
+/**
  * The set of FlowOperationType values that represent structural changes
  * requiring a graph rebuild via syncGraphFromFlowVersion.
  *
@@ -90,6 +108,14 @@ export type GraphState = {
   deleteSelectedGraphEdges: (edgeIds: string[]) => void;
   /** P2-B06: Сохранить позицию ноды через GRAPH_MOVE_NODE */
   moveGraphNodePosition: (nodeId: string, position: { x: number; y: number }) => void;
+  /** P3-B03: Отменить последнюю графовую операцию (Ctrl+Z) */
+  graphUndo: () => void;
+  /** P3-B03: Повторить отменённую графовую операцию (Ctrl+Shift+Z) */
+  graphRedo: () => void;
+  /** P3-B03: Есть ли операции для undo */
+  canGraphUndo: boolean;
+  /** P3-B03: Есть ли операции для redo */
+  canGraphRedo: boolean;
 };
 
 type GraphStateInitialState = Pick<BuilderState, 'flowVersion'>;
@@ -112,6 +138,37 @@ export const createGraphState = (
 ): GraphState => {
   const initialData = createInitialGraphData(initialState.flowVersion);
 
+  /**
+   * P3-B03: Undo/Redo стеки. Mutable массивы в замыкании.
+   *
+   * undoStack: снимки состояния ПЕРЕД каждой structural операцией.
+   * redoStack: снимки для redo (заполняется при undo, очищается при новой операции).
+   * _skipUndoCapture: флаг для предотвращения рекурсии при undo/redo.
+   */
+  const undoStack: GraphSnapshot[] = [];
+  const redoStack: GraphSnapshot[] = [];
+  let _skipUndoCapture = false;
+
+  /**
+   * P3-B03: Сохранить текущее состояние в undoStack.
+   * Вызывается ПЕРЕД rebuild графа при structural operations.
+   */
+  const pushUndoSnapshot = () => {
+    const state = get();
+    const snapshot: GraphSnapshot = {
+      graphNodes: structuredClone(state.graphNodes),
+      graphEdges: structuredClone(state.graphEdges),
+      flowVersion: structuredClone(state.flowVersion),
+    };
+    undoStack.push(snapshot);
+    if (undoStack.length > MAX_UNDO_STACK_SIZE) {
+      undoStack.shift();
+    }
+    // Новая операция очищает redo стек
+    redoStack.length = 0;
+    set({ canGraphUndo: true, canGraphRedo: false });
+  };
+
   // Auto-persist computed layout when shouldPersistLayout is true (P1-F03 migration)
   if (initialData.shouldPersistLayout) {
     setTimeout(() => {
@@ -129,12 +186,17 @@ export const createGraphState = (
 
   // Register operation listener for structural changes.
   // When the flow's linked-list structure changes, rebuild the graph.
+  // P3-B03: ПЕРЕД rebuild сохраняем snapshot для undo (если не в режиме undo/redo).
   // This is deferred to next tick to avoid circular set() during initialization.
   setTimeout(() => {
     const state = get();
     state.addOperationListener(
       (flowVersion: FlowVersion, operation: FlowOperationRequest) => {
         if (STRUCTURAL_OPERATIONS.has(operation.type)) {
+          // P3-B03: Сохраняем snapshot ПЕРЕД rebuild (если это не undo/redo восстановление)
+          if (!_skipUndoCapture) {
+            pushUndoSnapshot();
+          }
           const newData = syncGraphFromFlowVersion(flowVersion);
           set({
             graphNodes: newData.nodes,
@@ -315,5 +377,70 @@ export const createGraphState = (
         request: operation.request,
       });
     },
+
+    /**
+     * P3-B03: Отменить последнюю графовую операцию.
+     *
+     * Извлекает snapshot из undoStack, сохраняет текущее состояние в redoStack,
+     * и восстанавливает graphNodes + graphEdges + flowVersion из snapshot.
+     * Флаг _skipUndoCapture предотвращает рекурсивный push в undoStack
+     * из operation listener при восстановлении flowVersion.
+     */
+    graphUndo: () => {
+      if (undoStack.length === 0) return;
+      const snapshot = undoStack.pop()!;
+      const state = get();
+
+      // Сохраняем текущее состояние в redoStack
+      redoStack.push({
+        graphNodes: structuredClone(state.graphNodes),
+        graphEdges: structuredClone(state.graphEdges),
+        flowVersion: structuredClone(state.flowVersion),
+      });
+
+      // Восстанавливаем из snapshot (без тригера undo capture)
+      _skipUndoCapture = true;
+      set({
+        graphNodes: snapshot.graphNodes,
+        graphEdges: snapshot.graphEdges,
+        flowVersion: snapshot.flowVersion,
+        canGraphUndo: undoStack.length > 0,
+        canGraphRedo: true,
+      });
+      _skipUndoCapture = false;
+    },
+
+    /**
+     * P3-B03: Повторить отменённую графовую операцию.
+     *
+     * Извлекает snapshot из redoStack, сохраняет текущее состояние в undoStack,
+     * и восстанавливает graphNodes + graphEdges + flowVersion из snapshot.
+     */
+    graphRedo: () => {
+      if (redoStack.length === 0) return;
+      const snapshot = redoStack.pop()!;
+      const state = get();
+
+      // Сохраняем текущее состояние в undoStack
+      undoStack.push({
+        graphNodes: structuredClone(state.graphNodes),
+        graphEdges: structuredClone(state.graphEdges),
+        flowVersion: structuredClone(state.flowVersion),
+      });
+
+      // Восстанавливаем из snapshot (без тригера undo capture)
+      _skipUndoCapture = true;
+      set({
+        graphNodes: snapshot.graphNodes,
+        graphEdges: snapshot.graphEdges,
+        flowVersion: snapshot.flowVersion,
+        canGraphUndo: true,
+        canGraphRedo: redoStack.length > 0,
+      });
+      _skipUndoCapture = false;
+    },
+
+    canGraphUndo: false,
+    canGraphRedo: false,
   };
 };

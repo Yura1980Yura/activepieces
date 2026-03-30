@@ -6,7 +6,7 @@
  * и тестами в packages/shared для верификации набора shortcuts.
  *
  * P2-B05: Горячие клавиши Delete + Ctrl+A.
- * Undo/Redo отложен в Phase 3.
+ * P3-B03: Undo (Ctrl+Z) + Redo (Ctrl+Shift+Z).
  */
 
 /**
@@ -42,6 +42,8 @@ export const GRAPH_SHORTCUT_IDS = {
     SELECT_ALL: 'select-all',
     ESCAPE: 'escape-deselect',
     MULTI_SELECT: 'multi-select',
+    UNDO: 'undo',
+    REDO: 'redo',
 } as const
 
 export type GraphShortcutId = typeof GRAPH_SHORTCUT_IDS[keyof typeof GRAPH_SHORTCUT_IDS]
@@ -86,6 +88,22 @@ export const GRAPH_KEYBOARD_SHORTCUTS: Record<GraphShortcutId, KeyboardShortcutD
         shift: true,
         description: 'Hold to add to selection',
         category: 'selection',
+    },
+    [GRAPH_SHORTCUT_IDS.UNDO]: {
+        id: GRAPH_SHORTCUT_IDS.UNDO,
+        key: 'z',
+        ctrlOrMeta: true,
+        shift: false,
+        description: 'Undo last graph operation',
+        category: 'editing',
+    },
+    [GRAPH_SHORTCUT_IDS.REDO]: {
+        id: GRAPH_SHORTCUT_IDS.REDO,
+        key: 'z',
+        ctrlOrMeta: true,
+        shift: true,
+        description: 'Redo last undone graph operation',
+        category: 'editing',
     },
 }
 
