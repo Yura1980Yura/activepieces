@@ -149,6 +149,14 @@ export function linkedListToGraph(flowVersion: FlowVersion): GraphConversionResu
 
     traverseStep(flowVersion.trigger, nodes, edges)
 
+    // Добавить orphan ноды (без edges)
+    if (flowVersion.orphanSteps) {
+        for (const orphan of flowVersion.orphanSteps) {
+            // orphanSteps: Zod = z.any(), runtime = FlowAction[], каст безопасен
+            nodes.push(createNode(orphan as Step))
+        }
+    }
+
     // Apply stored positions from canvasLayout if available
     if (flowVersion.canvasLayout?.positions) {
         for (const node of nodes) {
