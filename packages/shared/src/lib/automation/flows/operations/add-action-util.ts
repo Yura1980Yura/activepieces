@@ -6,7 +6,7 @@ import { flowStructureUtil } from '../util/flow-structure-util'
 
 
 function mapToNewNames(flowVersion: FlowVersion, clonedActions: FlowAction[]): Record<string, string> {
-    const existingNames = flowStructureUtil.getAllSteps(flowVersion.trigger)
+    const existingNames = flowStructureUtil.getAllStepsWithOrphans(flowVersion)
         .map(step => step.name)
 
     const oldStepNames = clonedActions.flatMap(clonedAction => flowStructureUtil.getAllSteps(clonedAction).map(step => step.name))

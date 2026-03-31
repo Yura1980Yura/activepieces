@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { Nullable } from '../../../core/common'
 import { Metadata } from '../../../core/common/metadata'
-import { FlowActionType, BranchCondition, CodeActionSchema, CodeActionSettings, LoopOnItemsAction, LoopOnItemsActionSchema, LoopOnItemsActionSettings, PieceActionSchema, PieceActionSettings, RouterAction, RouterActionSchema, RouterActionSettings } from '../actions/action'
+import { FlowAction, FlowActionType, BranchCondition, CodeActionSchema, CodeActionSettings, LoopOnItemsAction, LoopOnItemsActionSchema, LoopOnItemsActionSettings, PieceActionSchema, PieceActionSettings, RouterAction, RouterActionSchema, RouterActionSettings } from '../actions/action'
 import { FlowStatus } from '../flow'
 import { CanvasLayout, FlowVersion, FlowVersionState } from '../flow-version'
 import { GraphData, type GraphEdgeDefinition, type GraphNodeDefinition } from '../graph-data'
@@ -556,10 +556,17 @@ function syncTriggerFromGraphData(flowVersion: FlowVersion): FlowVersion {
     }
     try {
         const trigger = graphDataToLinkedList(graphData)
+        const triggerStepNames = new Set(
+            flowStructureUtil.getAllSteps(trigger).map(s => s.name),
+        )
+        const orphanSteps = graphData.nodes
+            .filter(n => n.type !== 'trigger' && !triggerStepNames.has(n.id))
+            .map(n => nodeDefinitionToAction(n))
         return {
             ...flowVersion,
             trigger,
             graphData,
+            orphanSteps,
         }
     }
     catch {
@@ -618,8 +625,13 @@ function syncGraphDataFromTrigger(flowVersion: FlowVersion): FlowVersion {
         }
     }
 
-    // 2. ORPHAN REMOVAL: удалить ноды которых нет в trigger
-    clonedGraphData.nodes = clonedGraphData.nodes.filter(n => stepNames.has(n.id))
+    // 2. ORPHAN REMOVAL: удалить ноды которых нет ни в trigger, ни в orphanSteps
+    const orphanNames = new Set(
+        (flowVersion.orphanSteps ?? []).map((s: any) => s.name),
+    )
+    clonedGraphData.nodes = clonedGraphData.nodes.filter(
+        n => stepNames.has(n.id) || orphanNames.has(n.id),
+    )
 
     // 3. EDGES SYNC: полная регенерация из trigger structure
     clonedGraphData.edges = traverseTriggerToEdges(flowVersion.trigger)
@@ -688,4 +700,34 @@ function collectEdgesFromStep(step: Step | null | undefined, edges: GraphEdgeDef
         })
         collectEdgesFromStep(step.nextAction, edges)
     }
+}
+
+/**
+ * Конвертирует GraphNodeDefinition в FlowAction для orphan нод.
+ * Заполняет ВСЕ обязательные поля FlowAction: name, valid, displayName, type, settings, lastUpdatedDate.
+ * Для ROUTER добавляет children: [], для LOOP — firstLoopAction: undefined.
+ */
+function nodeDefinitionToAction(node: GraphNodeDefinition): FlowAction {
+    const actionType = node.actionType as FlowActionType
+    // Базовые поля, общие для всех типов FlowAction
+    const base = {
+        name: node.id,
+        type: actionType,
+        valid: node.valid,
+        displayName: node.displayName,
+        lastUpdatedDate: new Date().toISOString(),
+        skip: node.skip,
+        settings: node.settings as Record<string, unknown>,
+        nextAction: undefined,
+    }
+    // Router требует children: (FlowAction | null)[]
+    if (actionType === FlowActionType.ROUTER) {
+        return { ...base, children: [] } as unknown as FlowAction
+    }
+    // Loop может иметь firstLoopAction
+    if (actionType === FlowActionType.LOOP_ON_ITEMS) {
+        return { ...base, firstLoopAction: undefined } as unknown as FlowAction
+    }
+    // CODE и PIECE — базовые поля достаточны
+    return base as FlowAction
 }

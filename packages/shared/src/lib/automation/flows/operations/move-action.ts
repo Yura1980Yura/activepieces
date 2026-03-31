@@ -1,3 +1,4 @@
+import { FlowAction } from '../actions/action'
 import { FlowVersion } from '../flow-version'
 import { flowStructureUtil } from '../util/flow-structure-util'
 import { _getImportOperations } from './import-flow'
@@ -5,8 +6,8 @@ import { FlowOperationRequest, FlowOperationType, MoveActionRequest } from './in
 
 
 export function _moveAction(flowVersion: FlowVersion, request: MoveActionRequest): FlowOperationRequest[] {
-    const sourceStep = flowStructureUtil.getActionOrThrow(request.name, flowVersion.trigger)
-    flowStructureUtil.getStepOrThrow(request.newParentStep, flowVersion.trigger)
+    const sourceStep = flowStructureUtil.getActionOrThrow(request.name, flowVersion.trigger, flowVersion.orphanSteps as FlowAction[] | undefined)
+    flowStructureUtil.getStepOrThrow(request.newParentStep, flowVersion.trigger, flowVersion.orphanSteps as FlowAction[] | undefined)
     const sourceStepWithoutNextAction = {
         ...sourceStep,
         nextAction: undefined,

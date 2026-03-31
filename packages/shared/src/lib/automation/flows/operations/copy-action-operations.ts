@@ -3,9 +3,9 @@ import { FlowVersion } from '../flow-version'
 import { flowStructureUtil } from '../util/flow-structure-util'
 
 export function _getActionsForCopy(selectedSteps: string[], flowVersion: FlowVersion): FlowAction[] {
-    const allSteps = flowStructureUtil.getAllSteps(flowVersion.trigger)
+    const allSteps = flowStructureUtil.getAllStepsWithOrphans(flowVersion)
     const actionsToCopy = selectedSteps
-        .map((stepName) => flowStructureUtil.getStepOrThrow(stepName, flowVersion.trigger))
+        .map((stepName) => flowStructureUtil.getStepOrThrow(stepName, flowVersion.trigger, flowVersion.orphanSteps as FlowAction[] | undefined))
         .filter((step) => flowStructureUtil.isAction(step.type))
     return actionsToCopy
         .filter(step => !actionsToCopy.filter(parent => parent.name !== step.name).some(parent => flowStructureUtil.isChildOf(parent, step.name)))

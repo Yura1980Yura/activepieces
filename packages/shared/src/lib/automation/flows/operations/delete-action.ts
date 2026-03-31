@@ -39,6 +39,14 @@ function _deleteAction(
             }
             return parentStep
         })
+        // Удалить из orphanSteps если шаг там
+        if (clonedVersion.orphanSteps) {
+            clonedVersion = {
+                ...clonedVersion,
+                // orphanSteps: Zod = z.any(), runtime = FlowAction[], каст безопасен
+                orphanSteps: clonedVersion.orphanSteps.filter((s: any) => s.name !== name),
+            }
+        }
     }
     return clonedVersion
 }

@@ -8,7 +8,7 @@ import { FlowOperationRequest, FlowOperationType, StepLocationRelativeToParent }
 
 
 function _duplicateStep(stepName: string, flowVersion: FlowVersion): FlowOperationRequest[] {
-    const clonedAction: FlowAction = JSON.parse(JSON.stringify(flowStructureUtil.getActionOrThrow(stepName, flowVersion.trigger)))
+    const clonedAction: FlowAction = JSON.parse(JSON.stringify(flowStructureUtil.getActionOrThrow(stepName, flowVersion.trigger, flowVersion.orphanSteps as FlowAction[] | undefined)))
     const clonedActionWithoutNextAction = {
         ...clonedAction,
         nextAction: undefined,
@@ -37,7 +37,7 @@ function _duplicateBranch(
     childIndex: number,
     flowVersion: FlowVersion,
 ): FlowOperationRequest[] {
-    const router = flowStructureUtil.getActionOrThrow(routerName, flowVersion.trigger)
+    const router = flowStructureUtil.getActionOrThrow(routerName, flowVersion.trigger, flowVersion.orphanSteps as FlowAction[] | undefined)
     const clonedRouter: RouterAction = JSON.parse(JSON.stringify(router))
     const operations: FlowOperationRequest[] = [{
         type: FlowOperationType.ADD_BRANCH,
