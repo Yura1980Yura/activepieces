@@ -20,8 +20,8 @@ function isTrigger(type: FlowActionType | FlowTriggerType | undefined): type is 
     return Object.entries(FlowTriggerType).some(([, value]) => value === type)
 }
 
-function getActionOrThrow(name: string, flowRoot: Step): FlowAction {
-    const step = getStepOrThrow(name, flowRoot)
+function getActionOrThrow(name: string, flowRoot: Step, orphanSteps?: FlowAction[]): FlowAction {
+    const step = getStepOrThrow(name, flowRoot, orphanSteps)
     if (!isAction(step.type)) {
         throw new ActivepiecesError({
             code: ErrorCode.ENTITY_NOT_FOUND,
@@ -50,12 +50,18 @@ function getTriggerOrThrow(name: string, flowRoot: Step): FlowTrigger {
     return step as FlowTrigger
 }
 
-function getStep(name: string, flowRoot: Step): Step | undefined {
-    return getAllSteps(flowRoot).find((step) => step.name === name)
+function getStep(name: string, flowRoot: Step, orphanSteps?: FlowAction[]): Step | undefined {
+    const step = getAllSteps(flowRoot).find((step) => step.name === name)
+    if (step) return step
+    if (orphanSteps) {
+        // orphanSteps: Zod = z.any(), runtime = FlowAction[], каст безопасен
+        return orphanSteps.find(s => s.name === name) as Step | undefined
+    }
+    return undefined
 }
 
-function getStepOrThrow(name: string, flowRoot: Step): Step {
-    const step = getStep(name, flowRoot)
+function getStepOrThrow(name: string, flowRoot: Step, orphanSteps?: FlowAction[]): Step {
+    const step = getStep(name, flowRoot, orphanSteps)
     if (isNil(step)) {
         throw new ActivepiecesError({
             code: ErrorCode.ENTITY_NOT_FOUND,
@@ -113,11 +119,17 @@ function transferFlow<T extends Step>(
     flowVersion: FlowVersion,
     transferFunction: (step: T) => T,
 ): FlowVersion {
-    const clonedFlow = JSON.parse(JSON.stringify(flowVersion))
+    const clonedFlow: FlowVersion = JSON.parse(JSON.stringify(flowVersion))
     clonedFlow.trigger = transferStep(
         clonedFlow.trigger,
         transferFunction,
     ) as FlowTrigger
+    if (clonedFlow.orphanSteps) {
+        // orphanSteps: Zod = z.any(), runtime = FlowAction[], каст безопасен
+        clonedFlow.orphanSteps = clonedFlow.orphanSteps.map(
+            orphan => transferStep(orphan as Step, transferFunction) as FlowAction,
+        )
+    }
     return clonedFlow
 }
 
@@ -130,6 +142,21 @@ function getAllSteps(step: Step): Step[] {
     return steps
 }
 
+/**
+ * Возвращает ВСЕ шаги из FlowVersion: trigger chain + orphanSteps.
+ * Используй когда нужны orphan-шаги (extractAgentIds, extractConnectionIds, stepNames).
+ * НЕ используй для valid -- orphan-шаги НЕ должны влиять на valid.
+ */
+function getAllStepsWithOrphans(flowVersion: FlowVersion): Step[] {
+    const steps = getAllSteps(flowVersion.trigger)
+    if (flowVersion.orphanSteps) {
+        for (const orphan of flowVersion.orphanSteps) {
+            // orphanSteps: Zod = z.any(), runtime = FlowAction[]
+            steps.push(orphan as Step)
+        }
+    }
+    return steps
+}
 
 const createBranch = (branchName: string, conditions: BranchCondition[][] | undefined) => {
     return {
@@ -225,7 +252,7 @@ function extractAgentIds(flowVersion: FlowVersion): string[] {
         return null
     }
 
-    return flowStructureUtil.getAllSteps(flowVersion.trigger).map(step => getExternalAgentId(step)).filter(step => step !== null && step !== '')
+    return flowStructureUtil.getAllStepsWithOrphans(flowVersion).map(step => getExternalAgentId(step)).filter(step => step !== null && step !== '')
 }
 
 function isAgentPiece(action: Step) {
@@ -240,7 +267,7 @@ function extractConnectionIds(flowVersion: FlowVersion): string[] {
         : []
 
     const stepAuthIds = flowStructureUtil
-        .getAllSteps(flowVersion.trigger)
+        .getAllStepsWithOrphans(flowVersion)
         .flatMap(step =>
             step.settings?.input?.auth
                 ? extractConnectionIdsFromAuth(step.settings.input.auth)
@@ -254,6 +281,7 @@ export const flowStructureUtil = {
     isTrigger,
     isAction,
     getAllSteps,
+    getAllStepsWithOrphans,
     transferStep,
     transferFlow,
     getStepOrThrow,
