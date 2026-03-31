@@ -105,6 +105,7 @@ export const createRunState = (
         const parentLoop = flowStructureUtil.getStepOrThrow(
           stepName,
           state.flowVersion.trigger,
+          state.flowVersion.orphanSteps,
         );
         if (parentLoop.type !== FlowActionType.LOOP_ON_ITEMS) {
           console.error(
@@ -154,6 +155,7 @@ export const createRunState = (
       const step = flowStructureUtil.getStep(
         stepName,
         get().flowVersion.trigger,
+        get().flowVersion.orphanSteps,
       );
       if (isNil(step) || !flowStructureUtil.isAction(step?.type)) {
         console.error(`Step ${stepName} not found or is not an action`);
@@ -180,6 +182,7 @@ export const createRunState = (
               const failedStep = flowStructureUtil.getStep(
                 stepName,
                 state.flowVersion.trigger,
+                state.flowVersion.orphanSteps,
               );
               return {
                 flowVersion: flowOperations.apply(state.flowVersion, {
@@ -254,7 +257,7 @@ export const createRunState = (
     stepTestListeners: {},
     updateSampleData: ({ stepName, input, output }: UpdateSampleDataParams) => {
       const { setSampleDataLocally, applyOperation, flowVersion } = get();
-      const step = flowStructureUtil.getStep(stepName, flowVersion.trigger);
+      const step = flowStructureUtil.getStep(stepName, flowVersion.trigger, flowVersion.orphanSteps);
       if (isNil(step)) {
         console.error(`Step ${stepName} not found`);
         internalErrorToast();

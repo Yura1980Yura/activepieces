@@ -85,6 +85,7 @@ const BuilderPage = () => {
     flowStructureUtil.getStep(
       state.selectedStep ?? '',
       state.flowVersion.trigger,
+      state.flowVersion.orphanSteps,
     ),
     state.selectStepByName,
     state.graphNodes,

@@ -34,6 +34,7 @@ export const FlowStepInputOutput = () => {
         ? flowStructureUtil.getStepOrThrow(
             state.selectedStep,
             state.flowVersion.trigger,
+            state.flowVersion.orphanSteps,
           )
         : null,
     ],

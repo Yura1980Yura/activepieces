@@ -42,6 +42,7 @@ export const RouterSettings = memo(({ readonly }: { readonly: boolean }) => {
     flowStructureUtil.getActionOrThrow(
       state.selectedStep!,
       state.flowVersion.trigger,
+      state.flowVersion.orphanSteps,
     ) as RouterAction,
     state.applyOperation,
     state.setSelectedBranchIndex,
@@ -92,6 +93,7 @@ export const RouterSettings = memo(({ readonly }: { readonly: boolean }) => {
           const updatedStep = flowStructureUtil.getActionOrThrow(
             operation.request.stepName,
             flowVersion.trigger,
+            flowVersion.orphanSteps,
           );
           if (updatedStep.type !== FlowActionType.ROUTER) {
             console.error(

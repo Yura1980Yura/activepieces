@@ -153,7 +153,7 @@ const isAction = (step: Step): step is FlowAction => {
 const TestActionSection = React.memo((props: TestActionComponentProps) => {
   const currentStep = useBuilderStateContext((state) =>
     state.selectedStep
-      ? flowStructureUtil.getStep(state.selectedStep, state.flowVersion.trigger)
+      ? flowStructureUtil.getStep(state.selectedStep, state.flowVersion.trigger, state.flowVersion.orphanSteps)
       : null,
   );
   if (isNil(currentStep) || !isAction(currentStep)) {

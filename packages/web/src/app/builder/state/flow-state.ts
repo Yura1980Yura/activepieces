@@ -364,6 +364,7 @@ export const createFlowState = (
           const currentAction = flowStructureUtil.getStep(
             operation.stepName,
             flowVersion.trigger,
+            flowVersion.orphanSteps,
           );
           if (isNil(currentAction)) {
             console.error(
@@ -415,10 +416,12 @@ const handleUpdatingSampleDataForStepLocallyAfterServerUpdate = ({
   const localStep = flowStructureUtil.getStep(
     operation.request.stepName,
     localFlowVersion.trigger,
+    localFlowVersion.orphanSteps,
   );
   const updatedStep = flowStructureUtil.getStep(
     operation.request.stepName,
     updatedFlowVersion.trigger,
+    updatedFlowVersion.orphanSteps,
   );
   if (isNil(localStep) || isNil(updatedStep)) {
     console.error(`Step ${operation.request.stepName} not found`);

@@ -110,7 +110,7 @@ export function toggleSkipSelectedNodes({
   applyOperation,
 }: Pick<BuilderState, 'selectedNodes' | 'flowVersion' | 'applyOperation'>) {
   const steps = selectedNodes.map((node) =>
-    flowStructureUtil.getStepOrThrow(node, flowVersion.trigger),
+    flowStructureUtil.getStepOrThrow(node, flowVersion.trigger, flowVersion.orphanSteps),
   ) as FlowAction[];
   const areAllStepsSkipped = steps.every((step) => !!step.skip);
   applyOperation({
