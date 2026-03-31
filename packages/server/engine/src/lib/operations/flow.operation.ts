@@ -57,7 +57,7 @@ const executieSingleStepOrFlowOperation = async (input: ExecuteFlowOperation): P
             sampleData: input.sampleData,
             engineConstants: constants,
         })
-        const step = flowStructureUtil.getActionOrThrow(input.stepNameToTest!, input.flowVersion.trigger)
+        const step = flowStructureUtil.getActionOrThrow(input.stepNameToTest!, input.flowVersion.trigger, input.flowVersion.orphanSteps as import('@activepieces/shared').FlowAction[] | undefined)
         return flowExecutor.execute({
             action: step,
             executionState: await getFlowExecutionState(input, testContext),

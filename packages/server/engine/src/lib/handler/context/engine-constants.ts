@@ -140,7 +140,7 @@ export class EngineConstants {
             logsFileId: input.logsFileId,
             timeoutInSeconds: input.timeoutInSeconds,
             platformId: input.platformId,
-            stepNames: flowStructureUtil.getAllSteps(input.flowVersion.trigger).map((step) => step.name),
+            stepNames: flowStructureUtil.getAllStepsWithOrphans(input.flowVersion).map((step) => step.name),
         })
     }
 
@@ -188,7 +188,7 @@ export class EngineConstants {
             stepNameToTest: undefined,
             timeoutInSeconds: input.timeoutInSeconds,
             platformId: input.platformId,
-            stepNames: input.flowVersion?.trigger ? flowStructureUtil.getAllSteps(input.flowVersion.trigger).map((step) => step.name) : [],
+            stepNames: input.flowVersion ? flowStructureUtil.getAllStepsWithOrphans(input.flowVersion).map((step) => step.name) : [],
         })
     }
 
@@ -212,7 +212,7 @@ export class EngineConstants {
             stepNameToTest: undefined,
             timeoutInSeconds: input.timeoutInSeconds,
             platformId: input.platformId,
-            stepNames: flowStructureUtil.getAllSteps(input.flowVersion.trigger).map((step) => step.name),
+            stepNames: flowStructureUtil.getAllStepsWithOrphans(input.flowVersion).map((step) => step.name),
         })
     }
     public getPropsResolver(contextVersion: ContextVersion | undefined): PropsResolver {

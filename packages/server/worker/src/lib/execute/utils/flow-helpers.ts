@@ -35,7 +35,7 @@ export async function provisionFlowPieces(params: {
 }
 
 export async function extractPiecePackages(flowVersion: FlowVersion, platformId: string, log: Logger, apiClient: WorkerToApiContract): Promise<PiecePackage[]> {
-    const pieceSteps = flowStructureUtil.getAllSteps(flowVersion.trigger)
+    const pieceSteps = flowStructureUtil.getAllStepsWithOrphans(flowVersion)
         .filter((step) => step.type === FlowActionType.PIECE || step.type === FlowTriggerType.PIECE)
 
     return Promise.all(
@@ -50,7 +50,7 @@ export async function extractPiecePackages(flowVersion: FlowVersion, platformId:
 }
 
 export function extractCodeArtifacts(flowVersion: FlowVersion): CodeArtifact[] {
-    return flowStructureUtil.getAllSteps(flowVersion.trigger)
+    return flowStructureUtil.getAllStepsWithOrphans(flowVersion)
         .filter((step) => step.type === FlowActionType.CODE)
         .map((step) => ({
             name: step.name,
