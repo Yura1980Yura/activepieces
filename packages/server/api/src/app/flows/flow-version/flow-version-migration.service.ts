@@ -31,6 +31,7 @@ export const flowVersionMigrationService = (log: FastifyBaseLogger) => ({
             ...spreadIfDefined('trigger', migratedFlowVersion.trigger),
             ...spreadIfDefined('graphData', migratedFlowVersion.graphData),
             ...spreadIfDefined('canvasLayout', migratedFlowVersion.canvasLayout),
+            ...spreadIfDefined('orphanSteps', migratedFlowVersion.orphanSteps),
             connectionIds: migratedFlowVersion.connectionIds,
             agentIds: migratedFlowVersion.agentIds,
             backupFiles,

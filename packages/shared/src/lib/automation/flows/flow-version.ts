@@ -36,6 +36,9 @@ export const FlowVersion = z.object({
     displayName: z.string(),
     trigger: FlowTrigger,
     graphData: GraphData.optional(),
+    // orphanSteps: runtime тип = FlowAction[]. Zod не валидирует (FlowAction рекурсивен).
+    // При использовании ОБЯЗАТЕЛЕН каст: `as FlowAction` / `as FlowAction[]`
+    orphanSteps: z.array(z.any()).optional(),
     updatedBy: Nullable(z.string()),
     valid: z.boolean(),
     schemaVersion: Nullable(z.string()),

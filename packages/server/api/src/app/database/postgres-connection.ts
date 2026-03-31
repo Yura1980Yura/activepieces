@@ -350,6 +350,7 @@ import { AddUserIdentityIdIndex1774400000000 } from './migration/postgres/177440
 import { AddUserFkIndices1774449358000 } from './migration/postgres/1774449358000-AddUserFkIndices'
 import { AddCanvasLayoutToFlowVersion1775000000000 } from './migration/postgres/1775000000000-AddCanvasLayoutToFlowVersion'
 import { AddGraphDataToFlowVersion1776000000000 } from './migration/postgres/1776000000000-AddGraphDataToFlowVersion'
+import { AddOrphanStepsToFlowVersion1777000000000 } from './migration/postgres/1777000000000-AddOrphanStepsToFlowVersion'
 
 const getSslConfig = (): boolean | TlsOptions => {
     const useSsl = system.get(AppSystemProp.POSTGRES_USE_SSL)
@@ -716,6 +717,7 @@ export const getMigrations = (): (new () => MigrationInterface)[] => {
         AddUserFkIndices1774449358000,
         AddCanvasLayoutToFlowVersion1775000000000,
         AddGraphDataToFlowVersion1776000000000,
+        AddOrphanStepsToFlowVersion1777000000000,
     ]
     return migrations
 }

@@ -62,6 +62,10 @@ export const FlowVersionEntity = new EntitySchema<FlowVersionSchema>({
             type: 'jsonb',
             nullable: true,
         },
+        orphanSteps: {
+            type: 'jsonb',
+            nullable: true,
+        },
     },
     indices: [
         {
